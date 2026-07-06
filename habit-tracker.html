@@ -3,312 +3,589 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FF6B6B">
-<title>Sunrise Habits</title>
+<meta name="theme-color" content="#04060d">
+<title>ARISE — Daily Quest System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#FFF7F0;
-    --card:#FFFFFF;
-    --ink:#3D2C29;
-    --ink-soft:#9C8578;
-    --coral:#FF6B6B;
-    --orange:#FF9F43;
-    --pink:#FF6FA5;
-    --peach:#FFD3B6;
-    --line:#F4E6DA;
-    --grad:linear-gradient(135deg,#FF9F43 0%,#FF6B6B 55%,#FF6FA5 100%);
-    --radius:20px;
-    --shadow:0 4px 18px rgba(255,107,107,.10);
+    --bg:#04060d;
+    --panel:rgba(12,24,48,.55);
+    --panel-solid:#0b1730;
+    --sys:#4aa8ff;
+    --sys-glow:rgba(74,168,255,.35);
+    --violet:#8b5cf6;
+    --gold:#f5c542;
+    --danger:#ff3b4e;
+    --ink:#dbe9ff;
+    --ink-soft:#7d93b8;
+    --line:rgba(74,168,255,.25);
+    --line-dim:rgba(74,168,255,.12);
+    --radius:10px;
+    --font-head:"Orbitron","Segoe UI",system-ui,sans-serif;
+    --font-body:"Rajdhani","Segoe UI",system-ui,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html{font-size:16px}
   body{
-    font-family:ui-rounded,"Segoe UI",system-ui,-apple-system,sans-serif;
-    background:var(--bg);color:var(--ink);
-    min-height:100vh;overflow-x:hidden;
+    font-family:var(--font-body);
+    background:radial-gradient(ellipse at 50% -10%, #0b1430 0%, var(--bg) 55%) fixed, var(--bg);
+    color:var(--ink);min-height:100vh;overflow-x:hidden;letter-spacing:.02em;
   }
-  .app{max-width:640px;margin:0 auto;padding:0 16px 96px}
+  .scanlines{
+    position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:repeating-linear-gradient(0deg, rgba(120,180,255,.03) 0 1px, transparent 1px 3px);
+  }
+  .app{max-width:640px;margin:0 auto;padding:0 14px 110px;position:relative;z-index:2}
 
-  /* ---------- header ---------- */
-  header{
-    background:var(--grad);
-    margin:16px -4px 0;border-radius:28px;
-    padding:24px 22px 22px;color:#fff;
-    box-shadow:0 10px 30px rgba(255,107,107,.35);
-    display:flex;align-items:center;gap:18px;
-    position:relative;overflow:hidden;
+  /* ============ panel recipe ============ */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:0 0 18px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.06);
+    backdrop-filter:blur(8px);
   }
-  header::after{
-    content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;
-    background:rgba(255,255,255,.15);border-radius:50%;
+  @supports not (backdrop-filter: blur(8px)){
+    .panel{background:var(--panel-solid)}
   }
-  .head-text{flex:1;min-width:0;position:relative;z-index:1}
-  .date-line{font-size:.8rem;opacity:.9;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
-  h1{font-size:1.5rem;margin-top:4px;font-weight:800}
-  .head-sub{font-size:.85rem;margin-top:6px;opacity:.95;font-weight:500}
-  .ring-wrap{position:relative;width:78px;height:78px;flex-shrink:0;z-index:1}
+
+  /* ============ STATUS window ============ */
+  .status-win{
+    margin-top:16px;padding:16px 18px 18px;position:relative;
+  }
+  .status-win::before,.status-win::after,
+  .sheet::before,.sheet::after{
+    content:"";position:absolute;width:16px;height:16px;pointer-events:none;
+  }
+  .status-win::before{top:-1px;left:-1px;border-top:2px solid var(--sys);border-left:2px solid var(--sys)}
+  .status-win::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--sys);border-right:2px solid var(--sys)}
+  .status-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .sys-tag{
+    font-family:var(--font-head);font-size:.68rem;letter-spacing:.35em;color:var(--sys);
+    text-shadow:0 0 8px var(--sys-glow);font-weight:700;
+  }
+  .icon-btn{
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);
+    width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:1rem;
+  }
+  .icon-btn:hover{border-color:var(--sys);color:var(--ink)}
+  .status-main{display:flex;align-items:center;gap:16px}
+  .lv-block{text-align:center;flex-shrink:0}
+  .lv-label{font-family:var(--font-head);font-size:.65rem;letter-spacing:.25em;color:var(--ink-soft);display:block}
+  .lv-num{
+    font-family:var(--font-head);font-weight:900;font-size:2.6rem;line-height:1;
+    color:#fff;text-shadow:0 0 16px var(--sys),0 0 36px var(--sys-glow);
+  }
+  .status-info{flex:1;min-width:0}
+  .player-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .p-label{font-family:var(--font-head);font-size:.62rem;letter-spacing:.2em;color:var(--ink-soft)}
+  .p-name{font-family:var(--font-head);font-weight:700;font-size:.95rem;text-transform:uppercase;letter-spacing:.08em}
+  .edit-name{border:0;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:.85rem;padding:2px 4px}
+  .edit-name:hover{color:var(--sys)}
+  .rank-badge{
+    font-family:var(--font-head);font-weight:900;font-size:.8rem;
+    border:1px solid currentColor;border-radius:6px;padding:2px 8px;
+    text-shadow:0 0 8px currentColor;
+  }
+  .title-line{
+    border:0;background:transparent;color:var(--gold);font-family:var(--font-body);
+    font-weight:600;font-size:.85rem;cursor:pointer;padding:2px 0;letter-spacing:.06em;
+    text-shadow:0 0 10px rgba(245,197,66,.4);display:block;
+  }
+  .title-line:disabled{color:var(--ink-soft);text-shadow:none;cursor:default}
+  .exp-bar{
+    height:10px;border:1px solid var(--line);border-radius:6px;margin-top:8px;
+    background:rgba(0,0,0,.35);overflow:hidden;
+  }
+  .exp-bar i{
+    display:block;height:100%;width:0;border-radius:5px;
+    background:linear-gradient(90deg,var(--sys),var(--violet));
+    box-shadow:0 0 10px var(--sys-glow);transition:width .5s cubic-bezier(.22,1,.36,1);
+  }
+  .exp-text{font-size:.75rem;color:var(--ink-soft);margin-top:4px;font-weight:600;letter-spacing:.06em}
+  .ring-wrap{position:relative;width:76px;height:76px;flex-shrink:0}
   .ring-wrap svg{transform:rotate(-90deg)}
-  .ring-bg{stroke:rgba(255,255,255,.3)}
-  .ring-fg{stroke:#fff;stroke-linecap:round;transition:stroke-dashoffset .5s cubic-bezier(.22,1,.36,1)}
-  .ring-label{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-weight:800;font-size:1rem;
-  }
+  .ring-bg{stroke:rgba(74,168,255,.15)}
+  .ring-fg{stroke:var(--sys);stroke-linecap:round;filter:drop-shadow(0 0 5px var(--sys));transition:stroke-dashoffset .5s cubic-bezier(.22,1,.36,1)}
+  .ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font-head)}
+  .ring-label b{font-size:.9rem;font-weight:700}
+  .ring-label span{font-size:.5rem;letter-spacing:.15em;color:var(--ink-soft)}
+  .head-sub{margin-top:12px;font-size:.85rem;color:var(--ink-soft);font-weight:600;letter-spacing:.04em}
+  .date-line{font-size:.72rem;color:var(--ink-soft);letter-spacing:.2em;text-transform:uppercase;font-weight:600}
 
-  /* ---------- tabs ---------- */
-  .tabs{
-    display:flex;gap:6px;background:var(--card);border-radius:999px;
-    padding:5px;margin:18px 0 20px;box-shadow:var(--shadow);
-  }
+  /* ============ tabs ============ */
+  .tabs{display:flex;gap:6px;margin:16px 0 18px;padding:5px}
   .tabs button{
-    flex:1;border:0;background:transparent;font:inherit;font-weight:700;
-    padding:10px 0;border-radius:999px;color:var(--ink-soft);cursor:pointer;
-    transition:all .2s;
+    flex:1;border:0;background:transparent;font-family:var(--font-head);font-size:.72rem;
+    font-weight:700;letter-spacing:.18em;padding:11px 0;border-radius:7px;
+    color:var(--ink-soft);cursor:pointer;transition:all .2s;
   }
-  .tabs button.active{background:var(--grad);color:#fff;box-shadow:0 3px 10px rgba(255,107,107,.35)}
+  .tabs button.active{
+    background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    box-shadow:0 0 14px var(--sys-glow);
+  }
 
-  /* ---------- sections ---------- */
+  /* ============ sections ============ */
   .section-head{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
-  .section-head h2{font-size:1.05rem;font-weight:800}
+  .section-head h2{
+    font-family:var(--font-head);font-size:.8rem;font-weight:700;letter-spacing:.25em;
+    color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
+  }
   .pill-btn{
-    border:0;background:var(--grad);color:#fff;font:inherit;font-weight:700;
-    padding:8px 16px;border-radius:999px;cursor:pointer;font-size:.85rem;
-    box-shadow:0 3px 10px rgba(255,107,107,.3);transition:transform .15s;
+    border:1px solid var(--line);background:linear-gradient(135deg,rgba(74,168,255,.2),rgba(139,92,246,.2));
+    color:var(--ink);font-family:var(--font-body);font-weight:700;letter-spacing:.08em;
+    padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;
+    box-shadow:0 0 10px rgba(74,168,255,.2);transition:transform .15s;
   }
   .pill-btn:active{transform:scale(.94)}
-
   ul{list-style:none}
 
-  /* ---------- habit rows ---------- */
-  .habit{
-    display:flex;align-items:center;gap:14px;background:var(--card);
-    border-radius:var(--radius);padding:14px 14px;margin-bottom:10px;
-    box-shadow:var(--shadow);transition:transform .15s;
-    animation:slideIn .3s cubic-bezier(.22,1,.36,1) both;
+  /* ============ quest rows ============ */
+  .quest,.todo{
+    display:flex;align-items:center;gap:10px;padding:12px 12px;margin-bottom:9px;
+    animation:slideIn .3s cubic-bezier(.22,1,.36,1) both;position:relative;
   }
   @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .check{
-    width:46px;height:46px;border-radius:16px;flex-shrink:0;cursor:pointer;
-    border:2.5px solid var(--hc,var(--coral));background:transparent;
-    display:flex;align-items:center;justify-content:center;
-    transition:background .2s,border-color .2s;position:relative;
+  .quest.dragging,.todo.dragging{
+    z-index:10;box-shadow:0 0 26px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.12);
+    border-color:var(--sys);transition:none;
   }
-  .check svg{width:24px;height:24px}
+  .drag-handle{
+    color:var(--ink-soft);cursor:grab;font-size:1rem;padding:6px 2px;flex-shrink:0;
+    touch-action:none;user-select:none;line-height:1;
+  }
+  .drag-handle:active{cursor:grabbing}
+  .check{
+    width:42px;height:42px;border-radius:9px;flex-shrink:0;cursor:pointer;
+    border:1.5px solid var(--hc,var(--sys));background:transparent;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .2s,box-shadow .2s;
+  }
+  .check svg{width:22px;height:22px}
   .check path{
-    stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round;
+    stroke:#04060d;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round;
     stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .25s ease .05s;
   }
-  .habit.done .check{background:var(--hc,var(--coral));animation:pop .35s cubic-bezier(.22,1.6,.36,1)}
-  .habit.done .check path{stroke-dashoffset:0}
+  .done > .check{background:var(--hc,var(--sys));box-shadow:0 0 14px var(--hc,var(--sys));animation:pop .35s cubic-bezier(.22,1.6,.36,1)}
+  .done > .check path{stroke-dashoffset:0}
   @keyframes pop{0%{transform:scale(.7)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
-  .habit-info{flex:1;min-width:0}
-  .habit-name{font-weight:700;font-size:1rem;transition:opacity .2s}
-  .habit.done .habit-name{opacity:.55}
-  .habit-meta{font-size:.78rem;color:var(--ink-soft);margin-top:2px;font-weight:600}
-  .streak-hot{color:var(--orange)}
-  .more-btn{
-    border:0;background:transparent;color:var(--ink-soft);font-size:1.3rem;
-    cursor:pointer;padding:8px;border-radius:12px;line-height:1;
+  .quest-info{flex:1;min-width:0}
+  .quest-name{font-weight:700;font-size:1rem;letter-spacing:.03em}
+  .quest.done .quest-name{opacity:.55}
+  .q-emoji{
+    display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(219,233,255,.09);border-radius:6px;padding:1px 4px;margin-right:4px;
   }
-  .more-btn:hover{background:var(--line)}
+  .quest-meta{font-size:.75rem;color:var(--ink-soft);margin-top:2px;font-weight:600;letter-spacing:.04em}
+  .streak-hot{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.35)}
+  .clear-tag{color:var(--sys);font-family:var(--font-head);font-size:.62rem;letter-spacing:.2em;text-shadow:0 0 8px var(--sys-glow)}
+  .q-progress{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .q-bar{flex:1;height:7px;border:1px solid var(--line-dim);border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden}
+  .q-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--hc,var(--sys)),var(--violet));box-shadow:0 0 8px var(--hc,var(--sys));transition:width .3s;border-radius:3px}
+  .quest.done .q-bar i{background:linear-gradient(90deg,var(--gold),#ffdf85);box-shadow:0 0 8px var(--gold)}
+  .q-count{font-size:.72rem;font-weight:700;color:var(--ink-soft);white-space:nowrap;letter-spacing:.03em}
+  .steppers{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+  .step{
+    width:34px;height:26px;border-radius:7px;border:1px solid var(--line);
+    background:rgba(74,168,255,.08);color:var(--ink);font-size:1rem;font-weight:700;
+    cursor:pointer;line-height:1;
+  }
+  .step:active{background:rgba(74,168,255,.25)}
+  .more-btn{
+    border:0;background:transparent;color:var(--ink-soft);font-size:1.2rem;
+    cursor:pointer;padding:6px;border-radius:8px;line-height:1;flex-shrink:0;
+  }
+  .more-btn:hover{color:var(--sys)}
+  .rem-dot{font-size:.68rem;color:var(--violet)}
 
-  /* ---------- todos ---------- */
+  /* ============ side quests ============ */
   .todo-form{display:flex;gap:8px;margin-bottom:12px}
   .todo-form input{
-    flex:1;border:2px solid var(--line);background:var(--card);border-radius:999px;
-    padding:11px 18px;font:inherit;color:var(--ink);outline:none;transition:border-color .2s;
+    flex:1;border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:9px;
+    padding:11px 15px;font:inherit;color:var(--ink);outline:none;transition:border-color .2s;
   }
-  .todo-form input:focus{border-color:var(--pink)}
+  .todo-form input::placeholder{color:var(--ink-soft)}
+  .todo-form input:focus{border-color:var(--sys);box-shadow:0 0 10px var(--sys-glow)}
   .todo-form button{
-    width:46px;height:46px;border-radius:50%;border:0;background:var(--grad);
-    color:#fff;font-size:1.5rem;cursor:pointer;flex-shrink:0;font-weight:700;
-    box-shadow:0 3px 10px rgba(255,107,107,.3);
+    width:44px;height:44px;border-radius:9px;border:1px solid var(--line);
+    background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
+    color:var(--ink);font-size:1.4rem;cursor:pointer;flex-shrink:0;font-weight:700;
   }
-  .todo{
-    display:flex;align-items:center;gap:12px;background:var(--card);
-    border-radius:16px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow);
-    animation:slideIn .25s both;
-  }
-  .todo .check{width:32px;height:32px;border-radius:10px;border-color:var(--pink)}
-  .todo .check svg{width:17px;height:17px}
-  .todo.done .check{background:var(--pink)}
+  .todo .check{width:32px;height:32px;border-radius:8px;border-color:var(--violet)}
+  .todo .check svg{width:16px;height:16px}
+  .todo.done > .check{background:var(--violet);box-shadow:0 0 12px var(--violet)}
   .todo-text{flex:1;font-weight:600;font-size:.95rem}
   .todo.done .todo-text{text-decoration:line-through;opacity:.45}
-  .del-btn{border:0;background:transparent;color:var(--ink-soft);font-size:1.1rem;cursor:pointer;padding:6px;border-radius:10px}
-  .del-btn:hover{color:var(--coral);background:var(--line)}
+  .del-btn{border:0;background:transparent;color:var(--ink-soft);font-size:1rem;cursor:pointer;padding:6px;border-radius:8px}
+  .del-btn:hover{color:var(--danger)}
 
   .empty{
-    text-align:center;color:var(--ink-soft);padding:28px 16px;font-weight:600;
-    background:var(--card);border-radius:var(--radius);border:2px dashed var(--line);
+    text-align:center;color:var(--ink-soft);padding:26px 16px;font-weight:600;
+    border:1px dashed var(--line);border-radius:var(--radius);letter-spacing:.04em;
   }
-  .empty .big{font-size:2rem;display:block;margin-bottom:6px}
+  .empty .big{font-size:1.8rem;display:block;margin-bottom:6px}
 
-  /* ---------- week view ---------- */
-  .week-card{
-    background:var(--card);border-radius:var(--radius);padding:16px;
-    margin-bottom:12px;box-shadow:var(--shadow);animation:slideIn .3s both;
-  }
+  /* ============ week view ============ */
+  .week-card{padding:14px;margin-bottom:12px;animation:slideIn .3s both}
   .week-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-  .week-card-head .habit-name{font-size:.95rem}
-  .week-pct{font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+  .week-card-head .quest-name{font-size:.92rem}
+  .week-pct{font-size:.72rem;font-weight:700;color:var(--ink-soft);letter-spacing:.06em}
   .week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .day-col{display:flex;flex-direction:column;align-items:center;gap:5px}
-  .day-letter{font-size:.68rem;font-weight:700;color:var(--ink-soft)}
+  .day-letter{font-size:.62rem;font-weight:700;color:var(--ink-soft);font-family:var(--font-head)}
   .day-dot{
-    width:100%;aspect-ratio:1;max-width:44px;border-radius:12px;cursor:pointer;border:0;
-    background:var(--line);transition:all .2s;font-size:.8rem;font-weight:700;color:transparent;
+    width:100%;aspect-ratio:1;max-width:44px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line-dim);background:rgba(0,0,0,.3);transition:all .2s;
+    position:relative;overflow:hidden;
   }
-  .day-dot.on{background:var(--hc,var(--coral));color:#fff;box-shadow:0 3px 8px rgba(255,107,107,.35)}
-  .day-dot.today-dot{outline:2.5px solid var(--hc,var(--coral));outline-offset:2px}
-  .day-dot.future{opacity:.35;cursor:default}
-  .grace-note{text-align:center;font-size:.78rem;color:var(--ink-soft);font-weight:600;margin-top:16px}
+  .day-dot .fill{position:absolute;left:0;right:0;bottom:0;background:var(--hc,var(--sys));opacity:.55}
+  .day-dot.on{background:var(--hc,var(--sys));border-color:var(--hc,var(--sys));box-shadow:0 0 10px var(--hc,var(--sys))}
+  .day-dot.on .fill{display:none}
+  .day-dot.today-dot{outline:1.5px solid var(--hc,var(--sys));outline-offset:2px}
+  .day-dot.future{opacity:.25;cursor:default}
+  .grace-note{text-align:center;font-size:.76rem;color:var(--ink-soft);font-weight:600;margin-top:16px;letter-spacing:.04em}
 
-  /* ---------- month view ---------- */
+  /* ============ records ============ */
   .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .month-nav h3{font-size:1.05rem;font-weight:800}
+  .month-nav h3{font-family:var(--font-head);font-size:.9rem;font-weight:700;letter-spacing:.15em}
   .month-nav button{
-    border:0;background:var(--card);width:38px;height:38px;border-radius:12px;
-    font-size:1.1rem;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-weight:700;
+    border:1px solid var(--line);background:rgba(74,168,255,.08);width:38px;height:38px;
+    border-radius:9px;font-size:1.1rem;cursor:pointer;color:var(--ink);font-weight:700;
   }
-  .month-grid{
-    display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-    background:var(--card);padding:16px;border-radius:var(--radius);box-shadow:var(--shadow);
-  }
-  .month-grid .dow{text-align:center;font-size:.68rem;font-weight:700;color:var(--ink-soft);padding-bottom:4px}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:14px}
+  .month-grid .dow{text-align:center;font-size:.6rem;font-weight:700;color:var(--ink-soft);padding-bottom:4px;font-family:var(--font-head);letter-spacing:.1em}
   .m-day{
-    aspect-ratio:1;border-radius:11px;display:flex;align-items:center;justify-content:center;
-    font-size:.75rem;font-weight:700;background:#FAF1E8;color:var(--ink-soft);
+    aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    font-size:.72rem;font-weight:700;background:rgba(74,168,255,.05);color:var(--ink-soft);
+    border:1px solid transparent;cursor:pointer;font-family:var(--font-body);
   }
-  .m-day.future{opacity:.35}
-  .m-day.is-today{outline:2.5px solid var(--coral);outline-offset:1.5px}
-  .legend{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-size:.75rem;color:var(--ink-soft);font-weight:600}
+  button.m-day:hover{border-color:var(--sys)}
+  .m-day.future{opacity:.3;cursor:default}
+  .m-day.is-today{outline:1.5px solid var(--sys);outline-offset:1px}
+  .legend{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-size:.72rem;color:var(--ink-soft);font-weight:600}
   .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .records-hint{text-align:center;font-size:.76rem;color:var(--ink-soft);font-weight:600;margin-top:10px;letter-spacing:.04em}
 
-  /* ---------- modal ---------- */
+  /* ============ modal sheets ============ */
   .overlay{
-    position:fixed;inset:0;background:rgba(61,44,41,.4);display:flex;
+    position:fixed;inset:0;background:rgba(2,4,10,.7);display:flex;
     align-items:flex-end;justify-content:center;z-index:50;
-    opacity:0;pointer-events:none;transition:opacity .25s;
+    opacity:0;pointer-events:none;transition:opacity .22s;
   }
   .overlay.open{opacity:1;pointer-events:auto}
   .sheet{
-    background:var(--card);width:100%;max-width:640px;border-radius:28px 28px 0 0;
-    padding:24px 22px 34px;transform:translateY(40px);transition:transform .3s cubic-bezier(.22,1,.36,1);
+    width:100%;max-width:640px;border-radius:14px 14px 0 0;
+    padding:22px 20px 34px;transform:translateY(30px) scaleY(.96);
+    transition:transform .28s cubic-bezier(.22,1,.36,1);position:relative;
+    max-height:86vh;overflow-y:auto;
+    background:rgba(9,18,38,.92);border:1px solid var(--line);
+    box-shadow:0 0 30px var(--sys-glow), inset 0 0 40px rgba(74,168,255,.05);
+    backdrop-filter:blur(12px);
   }
-  .overlay.open .sheet{transform:none}
+  @supports not (backdrop-filter: blur(12px)){ .sheet{background:#0a1428} }
+  .overlay.open .sheet{transform:none;animation:materialize .3s}
+  @keyframes materialize{
+    0%{opacity:0;transform:scaleY(.7)}
+    40%{opacity:1}
+    55%{opacity:.6}
+    70%{opacity:1;transform:scaleY(1)}
+  }
+  .sheet::before{top:-1px;left:-1px;border-top:2px solid var(--sys);border-left:2px solid var(--sys)}
+  .sheet::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--sys);border-right:2px solid var(--sys)}
   @media(min-width:700px){
     .overlay{align-items:center}
-    .sheet{border-radius:28px;max-width:440px;padding-bottom:24px}
+    .sheet{border-radius:14px;max-width:460px;padding-bottom:24px}
   }
-  .sheet h3{font-size:1.15rem;font-weight:800;margin-bottom:16px}
-  .sheet label{display:block;font-size:.78rem;font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.05em}
-  .sheet input[type=text]{
-    width:100%;border:2px solid var(--line);border-radius:14px;padding:12px 14px;
-    font:inherit;color:var(--ink);outline:none;
+  .sheet h3{
+    font-family:var(--font-head);font-size:.85rem;font-weight:700;letter-spacing:.25em;
+    margin-bottom:16px;color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
   }
-  .sheet input[type=text]:focus{border-color:var(--coral)}
+  .sheet label{display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.15em;font-family:var(--font-head)}
+  .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet select{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
+    font:inherit;color:var(--ink);outline:none;background:rgba(0,0,0,.35);
+  }
+  .sheet input:focus,.sheet select:focus{border-color:var(--sys);box-shadow:0 0 10px var(--sys-glow)}
+  .sheet select option{background:#0a1428}
   .emoji-row,.color-row{display:flex;gap:8px;flex-wrap:wrap}
   .emoji-opt{
-    width:44px;height:44px;border-radius:13px;border:2px solid var(--line);
-    background:transparent;font-size:1.35rem;cursor:pointer;transition:all .15s;
+    width:42px;height:42px;border-radius:9px;border:1px solid var(--line-dim);
+    background:rgba(219,233,255,.05);font-size:1.3rem;cursor:pointer;transition:all .15s;
   }
-  .emoji-opt.sel{border-color:var(--coral);background:#FFF0EC;transform:scale(1.08)}
-  .color-opt{width:36px;height:36px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .15s}
-  .color-opt.sel{border-color:var(--ink);transform:scale(1.12)}
+  .emoji-opt.sel{border-color:var(--sys);background:rgba(74,168,255,.15);box-shadow:0 0 10px var(--sys-glow);transform:scale(1.08)}
+  .color-opt{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .15s}
+  .color-opt.sel{border-color:#fff;transform:scale(1.12);box-shadow:0 0 10px currentColor}
+  .field-row{display:flex;gap:10px}
+  .field-row > div{flex:1}
+  .toggle-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .toggle-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--sys)}
+  .toggle-row span{font-weight:600;font-size:.9rem}
+  .sheet-note{font-size:.75rem;color:var(--ink-soft);margin-top:8px;font-weight:600}
   .sheet-actions{display:flex;gap:10px;margin-top:22px}
-  .sheet-actions .pill-btn{flex:1;padding:13px 0;font-size:.95rem}
+  .sheet-actions .pill-btn{flex:1;padding:13px 0;font-size:.92rem;letter-spacing:.1em}
   .danger-btn{
-    border:2px solid #FFD9D9;background:#FFF5F5;color:var(--coral);font:inherit;
-    font-weight:700;padding:13px 18px;border-radius:999px;cursor:pointer;
+    border:1px solid rgba(255,59,78,.4);background:rgba(255,59,78,.08);color:var(--danger);
+    font:inherit;font-weight:700;padding:13px 18px;border-radius:9px;cursor:pointer;letter-spacing:.06em;
+  }
+  .hiddenblock{display:none !important}
+
+  /* day editor rows */
+  .de-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line-dim)}
+  .de-row:last-of-type{border-bottom:0}
+  .de-row .quest-name{font-size:.92rem;flex:1;min-width:0}
+  .de-steppers{display:flex;align-items:center;gap:8px}
+  .de-count{font-size:.78rem;font-weight:700;color:var(--ink-soft);min-width:64px;text-align:center}
+
+  /* title picker */
+  .title-opt{
+    display:block;width:100%;text-align:left;border:1px solid var(--line-dim);background:rgba(0,0,0,.25);
+    color:var(--gold);font:inherit;font-weight:600;padding:12px 14px;border-radius:9px;
+    margin-bottom:8px;cursor:pointer;letter-spacing:.06em;
+  }
+  .title-opt.sel{border-color:var(--gold);box-shadow:0 0 10px rgba(245,197,66,.3)}
+  .title-locked{color:var(--ink-soft);text-shadow:none}
+
+  /* ============ level up overlay ============ */
+  .lvl-overlay{
+    position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 45%, rgba(74,168,255,.35), rgba(2,4,10,.88) 70%);
+    opacity:0;pointer-events:none;transition:opacity .25s;
+  }
+  .lvl-overlay.show{opacity:1;pointer-events:auto}
+  .lvl-word{
+    font-family:var(--font-head);font-weight:900;font-size:clamp(2.4rem,10vw,4.5rem);
+    color:#fff;text-shadow:0 0 20px var(--sys),0 0 60px var(--sys);letter-spacing:.12em;
+    text-align:center;
+  }
+  .lvl-overlay.show .lvl-word{animation:glitch 1.4s infinite}
+  .lvl-nums{
+    font-family:var(--font-head);font-weight:700;font-size:1.2rem;color:var(--gold);
+    text-align:center;margin-top:14px;letter-spacing:.2em;text-shadow:0 0 14px rgba(245,197,66,.6);
+  }
+  @keyframes glitch{
+    0%,92%,100%{transform:none;opacity:1}
+    94%{transform:translateX(3px) skewX(2deg);opacity:.8}
+    96%{transform:translateX(-3px);opacity:1}
+    98%{transform:translateX(1px) skewX(-1deg);opacity:.9}
   }
 
-  /* ---------- confetti ---------- */
-  .confetti{
-    position:fixed;top:-14px;width:11px;height:11px;border-radius:3px;z-index:99;
-    pointer-events:none;animation:fall 2.6s ease-in forwards;
+  /* ============ banners ============ */
+  .warn-banner{
+    position:fixed;top:0;left:0;right:0;z-index:80;display:none;
+    align-items:center;gap:12px;justify-content:center;padding:13px 44px 13px 16px;
+    background:rgba(40,4,10,.92);border-bottom:1px solid var(--danger);
+    color:#ffb3ba;font-weight:700;letter-spacing:.05em;font-size:.85rem;
+    box-shadow:0 0 26px rgba(255,59,78,.4);animation:pulse 1.6s infinite;
   }
-  @keyframes fall{
-    to{transform:translateY(110vh) translateX(var(--x,0)) rotate(var(--r,360deg));opacity:.7}
+  .warn-banner.show{display:flex}
+  @keyframes pulse{0%,100%{box-shadow:0 0 16px rgba(255,59,78,.3)}50%{box-shadow:0 0 34px rgba(255,59,78,.6)}}
+  .warn-banner button{
+    position:absolute;right:10px;border:0;background:transparent;color:#ffb3ba;
+    font-size:1rem;cursor:pointer;padding:6px;
   }
+  .alert-stack{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:85;width:min(92vw,480px);display:flex;flex-direction:column;gap:8px}
+  .sys-alert{
+    border:1px solid var(--line);background:rgba(9,18,38,.95);border-radius:9px;
+    padding:12px 16px;font-weight:600;font-size:.86rem;letter-spacing:.04em;
+    box-shadow:0 0 20px var(--sys-glow);animation:materialize .3s;
+  }
+  .sys-alert b{color:var(--sys);font-family:var(--font-head);font-size:.68rem;letter-spacing:.2em;display:block;margin-bottom:3px}
+
   .toast{
-    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);
-    background:var(--grad);color:#fff;font-weight:800;padding:13px 26px;
-    border-radius:999px;box-shadow:0 8px 24px rgba(255,107,107,.4);z-index:98;
-    transition:transform .35s cubic-bezier(.22,1.4,.36,1);white-space:nowrap;
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(90px);
+    background:rgba(9,18,38,.95);border:1px solid var(--line);color:var(--ink);
+    font-weight:700;padding:12px 24px;border-radius:9px;letter-spacing:.06em;
+    box-shadow:0 0 22px var(--sys-glow);z-index:88;font-size:.88rem;
+    transition:transform .35s cubic-bezier(.22,1.4,.36,1);white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis;
   }
   .toast.show{transform:translateX(-50%) translateY(0)}
+
+  /* ============ particles ============ */
+  .particle{
+    position:fixed;top:-14px;width:9px;height:9px;z-index:99;pointer-events:none;
+    animation:fall 2.6s ease-in forwards;box-shadow:0 0 8px currentColor;
+  }
+  @keyframes fall{to{transform:translateY(110vh) translateX(var(--x,0)) rotate(var(--r,360deg));opacity:.6}}
+
+  @media (prefers-reduced-motion: reduce){
+    .scanlines{display:none}
+    .lvl-word{animation:none}
+    .warn-banner{animation:none}
+    .overlay.open .sheet{animation:none}
+    *{transition-duration:.01s !important}
+  }
 </style>
 </head>
 <body>
+<div class="scanlines"></div>
+
+<div class="warn-banner" id="warnBanner">
+  <span>⚠ WARNING — Daily Quests incomplete. Complete your quests, Hunter, or face a penalty.</span>
+  <button id="warnClose" aria-label="Dismiss warning">✕</button>
+</div>
+<div class="alert-stack" id="alertStack"></div>
+
 <div class="app">
-  <header>
-    <div class="head-text">
-      <div class="date-line" id="dateLine"></div>
-      <h1 id="greeting"></h1>
-      <div class="head-sub" id="headSub"></div>
+  <header class="status-win panel">
+    <div class="status-top">
+      <span class="sys-tag">⬢ STATUS</span>
+      <span class="date-line" id="dateLine"></span>
+      <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
     </div>
-    <div class="ring-wrap">
-      <svg width="78" height="78" viewBox="0 0 78 78">
-        <circle class="ring-bg" cx="39" cy="39" r="33" fill="none" stroke-width="7"/>
-        <circle class="ring-fg" id="ringFg" cx="39" cy="39" r="33" fill="none" stroke-width="7"
-                stroke-dasharray="207.3" stroke-dashoffset="207.3"/>
-      </svg>
-      <div class="ring-label" id="ringLabel">0/0</div>
+    <div class="status-main">
+      <div class="lv-block">
+        <span class="lv-label">LV.</span>
+        <span class="lv-num" id="lvNum">1</span>
+      </div>
+      <div class="status-info">
+        <div class="player-line">
+          <span class="p-label">PLAYER:</span>
+          <span class="p-name" id="playerName">HUNTER</span>
+          <button class="edit-name" id="editNameBtn" aria-label="Edit name">✎</button>
+          <span class="rank-badge" id="rankBadge">E</span>
+        </div>
+        <button class="title-line" id="titleLine">— No Title —</button>
+        <div class="exp-bar"><i id="expFill"></i></div>
+        <div class="exp-text" id="expText">0 / 100 EXP</div>
+      </div>
+      <div class="ring-wrap">
+        <svg width="76" height="76" viewBox="0 0 76 76">
+          <circle class="ring-bg" cx="38" cy="38" r="32" fill="none" stroke-width="6"/>
+          <circle class="ring-fg" id="ringFg" cx="38" cy="38" r="32" fill="none" stroke-width="6"
+                  stroke-dasharray="201.1" stroke-dashoffset="201.1"/>
+        </svg>
+        <div class="ring-label"><b id="ringCount">0/0</b><span>GATE</span></div>
+      </div>
     </div>
+    <div class="head-sub" id="headSub"></div>
   </header>
 
-  <nav class="tabs">
-    <button data-tab="today" class="active">Today</button>
-    <button data-tab="week">Week</button>
-    <button data-tab="month">Month</button>
+  <nav class="tabs panel">
+    <button data-tab="quests" class="active">QUESTS</button>
+    <button data-tab="week">WEEK</button>
+    <button data-tab="records">RECORDS</button>
   </nav>
 
   <main>
-    <section id="tab-today">
+    <section id="tab-quests">
       <div class="section-head">
-        <h2>Daily habits</h2>
-        <button class="pill-btn" id="addHabitBtn">+ Add habit</button>
+        <h2>DAILY QUESTS</h2>
+        <button class="pill-btn" id="addQuestBtn">+ NEW QUEST</button>
       </div>
-      <ul id="habitList"></ul>
+      <ul id="questList"></ul>
 
-      <div class="section-head"><h2>To-dos</h2></div>
+      <div class="section-head"><h2>SIDE QUESTS</h2></div>
       <form class="todo-form" id="todoForm">
-        <input type="text" id="todoInput" placeholder="Add a one-off task…" maxlength="80" autocomplete="off">
-        <button type="submit" aria-label="Add to-do">+</button>
+        <input type="text" id="todoInput" placeholder="Log a side quest…" maxlength="80" autocomplete="off">
+        <button type="submit" aria-label="Add side quest">+</button>
       </form>
       <ul id="todoList"></ul>
     </section>
 
     <section id="tab-week" hidden></section>
 
-    <section id="tab-month" hidden>
+    <section id="tab-records" hidden>
       <div class="month-nav">
         <button id="prevMonth" aria-label="Previous month">‹</button>
         <h3 id="monthTitle"></h3>
         <button id="nextMonth" aria-label="Next month">›</button>
       </div>
-      <div class="month-grid" id="monthGrid"></div>
+      <div class="month-grid panel" id="monthGrid"></div>
       <div class="legend">
-        Less <i style="background:#FAF1E8"></i><i style="background:#FFD9C4"></i><i style="background:#FFAD8E"></i><i style="background:#FF8168"></i><i style="background:#FF6B6B"></i> More
+        Less <i style="background:rgba(74,168,255,.06)"></i><i style="background:#123a6b"></i><i style="background:#1e5fae"></i><i style="background:#8b5cf6"></i><i style="background:#f5c542"></i> More
       </div>
+      <div class="records-hint">Tap any past day to edit its records — no EXP for past gates.</div>
     </section>
   </main>
 </div>
 
-<!-- add / edit habit modal -->
-<div class="overlay" id="overlay">
+<!-- quest add/edit -->
+<div class="overlay" id="questOverlay">
   <div class="sheet">
-    <h3 id="sheetTitle">New habit</h3>
-    <label>Name</label>
-    <input type="text" id="habitNameInput" placeholder="e.g. Morning stretch" maxlength="40" autocomplete="off">
+    <h3 id="sheetTitle">NEW QUEST</h3>
+    <label>Quest name</label>
+    <input type="text" id="questNameInput" placeholder="e.g. Train body" maxlength="40" autocomplete="off">
     <label>Icon</label>
     <div class="emoji-row" id="emojiRow"></div>
     <label>Color</label>
     <div class="color-row" id="colorRow"></div>
-    <div class="sheet-actions">
-      <button class="danger-btn" id="deleteHabitBtn" hidden>Delete</button>
-      <button class="pill-btn" id="saveHabitBtn">Save</button>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="targetToggle">
+      <span>Set a target amount (e.g. 30 min)</span>
     </div>
+    <div id="targetFields" class="hiddenblock">
+      <div class="field-row">
+        <div><label>Amount</label><input type="number" id="targetAmount" min="1" max="9999" value="30"></div>
+        <div><label>Unit</label>
+          <select id="targetUnit">
+            <option value="min">min</option>
+            <option value="hr">hr</option>
+            <option value="glasses">glasses</option>
+            <option value="reps">reps</option>
+            <option value="pages">pages</option>
+            <option value="custom">custom…</option>
+          </select>
+        </div>
+        <div><label>Step</label><input type="number" id="targetStep" min="1" max="999" value="5"></div>
+      </div>
+      <div id="customUnitWrap" class="hiddenblock">
+        <label>Custom unit</label>
+        <input type="text" id="customUnit" placeholder="e.g. km" maxlength="12">
+      </div>
+    </div>
+
+    <label>Reminder (optional)</label>
+    <div class="field-row">
+      <div><input type="time" id="reminderInput"></div>
+      <div style="flex:0"><button type="button" class="icon-btn" id="clearReminder" title="Clear reminder" style="height:44px;width:44px">✕</button></div>
+    </div>
+    <div class="sheet-note" id="notifNote">Alerts fire while this page is open in a tab.</div>
+
+    <div class="sheet-actions">
+      <button class="danger-btn" id="deleteQuestBtn" hidden>DELETE</button>
+      <button class="pill-btn" id="saveQuestBtn">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- day editor -->
+<div class="overlay" id="dayOverlay">
+  <div class="sheet">
+    <h3 id="dayTitle">GATE RECORDS</h3>
+    <div id="dayRows"></div>
+    <div class="sheet-note">Editing past records fixes history and streaks. No EXP is awarded for past gates.</div>
+    <div class="sheet-actions"><button class="pill-btn" id="dayClose">CLOSE</button></div>
+  </div>
+</div>
+
+<!-- hunter name -->
+<div class="overlay" id="nameOverlay">
+  <div class="sheet">
+    <h3>SYSTEM REGISTRATION</h3>
+    <div class="sheet-note" style="margin-top:0">You have been recognized as a Player. State your name, Hunter.</div>
+    <label>Hunter name</label>
+    <input type="text" id="nameInput" placeholder="Sung Jin-Woo" maxlength="20" autocomplete="off">
+    <div class="sheet-actions"><button class="pill-btn" id="nameSave">CONFIRM</button></div>
+  </div>
+</div>
+
+<!-- title picker -->
+<div class="overlay" id="titleOverlay">
+  <div class="sheet">
+    <h3>TITLES</h3>
+    <div id="titleOpts"></div>
+    <div class="sheet-actions"><button class="pill-btn" id="titleClose">CLOSE</button></div>
+  </div>
+</div>
+
+<div class="lvl-overlay" id="lvlOverlay">
+  <div>
+    <div class="lvl-word">LEVEL UP!</div>
+    <div class="lvl-nums" id="lvlNums"></div>
   </div>
 </div>
 
@@ -316,41 +593,78 @@
 
 <script>
 "use strict";
-/* ================= state ================= */
-const STORE_KEY = "sunrise-habits-v1";
-const PALETTE = ["#FF6B6B","#FF9F43","#FF6FA5","#F368E0","#FF7F50","#E8505B"];
-const EMOJIS = ["💪","🏃","📖","💧","🧘","🥗","😴","✍️","🎸","🦷","🌅","🧹"];
+/* ================= constants & helpers ================= */
+const V2_KEY = "system-habits-v2", V1_KEY = "sunrise-habits-v1";
+const NEON = ["#4aa8ff","#8b5cf6","#22d3ee","#34d399","#f5c542","#ff5c8a"];
+const EMOJIS = ["⚔️","💪","🏃","📖","💧","🧘","🥗","😴","✍️","🛡️","🌅","🧹"];
+const BASE_XP = 20, SIDE_XP = 5, PERFECT_XP = 25;
+const DAY_LETTERS = ["M","T","W","T","F","S","S"];
 
-const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const pad = n => String(n).padStart(2,"0");
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const parseD = s => { const [y,m,dd] = s.split("-").map(Number); return new Date(y, m-1, dd); };
 const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
 const todayStr = () => fmt(new Date());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-function defaultState(){
-  const t = todayStr();
+/* ================= state & migration ================= */
+function baseState(){
   return {
-    habits: [
-      {id:uid(), name:"Exercise",    emoji:"💪", color:PALETTE[0], createdAt:t, log:{}},
-      {id:uid(), name:"Read",        emoji:"📖", color:PALETTE[1], createdAt:t, log:{}},
-      {id:uid(), name:"Drink water", emoji:"💧", color:PALETTE[2], createdAt:t, log:{}}
-    ],
-    todos: []
+    version: 2,
+    player: { name:null, exp:0, title:null, titles:[], muted:false, seenLevel:1 },
+    quests: [], todos: [],
+    meta: { xpLedger:{}, remindersFired:{}, warnedOn:null }
   };
 }
-let state;
-try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); }
-catch(e){ state = defaultState(); }
-const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(state));
+function defaultState(){
+  const st = baseState(), t = todayStr();
+  st.quests = [
+    {id:uid(), name:"Train body",    emoji:"💪", color:NEON[0], createdAt:t, target:{amount:30,unit:"min",step:5}, reminder:null, log:{}},
+    {id:uid(), name:"Read grimoire", emoji:"📖", color:NEON[1], createdAt:t, target:{amount:20,unit:"pages",step:5}, reminder:null, log:{}},
+    {id:uid(), name:"Hydrate",       emoji:"💧", color:NEON[2], createdAt:t, target:{amount:8,unit:"glasses",step:1}, reminder:null, log:{}}
+  ];
+  return st;
+}
+function migrate(){
+  try{
+    const v2 = JSON.parse(localStorage.getItem(V2_KEY));
+    if (v2 && v2.version === 2 && Array.isArray(v2.quests)) return v2;
+  }catch(e){}
+  try{
+    const v1 = JSON.parse(localStorage.getItem(V1_KEY));   // v1 key is never deleted (backup)
+    if (v1 && Array.isArray(v1.habits)){
+      const st = baseState();
+      st.quests = v1.habits.map((h,i) => ({
+        id: h.id || uid(), name: h.name || "Quest", emoji: h.emoji || "⚔️",
+        color: NEON[i % NEON.length], createdAt: h.createdAt || todayStr(),
+        target: null, reminder: null,
+        log: Object.fromEntries(Object.keys(h.log || {}).map(k => [k, 1]))
+      }));
+      st.todos = (v1.todos || []).map(t => ({id: t.id || uid(), text: t.text || "", done: !!t.done}));
+      const completions = st.quests.reduce((n,q) => n + Object.keys(q.log).length, 0);
+      st.player.exp = completions * BASE_XP;
+      st.player.seenLevel = levelFromExp(st.player.exp).level;
+      return st;
+    }
+  }catch(e){}
+  return defaultState();
+}
 
-/* ================= streaks (1 grace day per week) ================= */
-function streakOf(h){
-  const created = parseD(h.createdAt);
+/* ================= quest math ================= */
+const targetOf   = q => q.target ? q.target.amount : 1;
+const stepOf     = q => q.target ? Math.max(1, q.target.step || 1) : 1;
+const unitOf     = q => q.target ? q.target.unit : "";
+const progressOf = (q,key) => q.log[key] || 0;
+const isDone     = (q,key) => progressOf(q,key) >= targetOf(q);
+
+function streakOf(q){
+  const created = parseD(q.createdAt);
   let d = new Date(); d.setHours(0,0,0,0);
-  if (!h.log[fmt(d)]) d = addDays(d,-1);       // today still pending doesn't break it
+  if (!isDone(q, fmt(d))) d = addDays(d,-1);      // today pending doesn't break it
   let streak = 0, lastGrace = null;
   while (d >= created && streak < 3650){
-    if (h.log[fmt(d)]) streak++;
+    if (isDone(q, fmt(d))) streak++;
     else {
       const graceOk = streak > 0 && (!lastGrace || (lastGrace - d) / 864e5 >= 7);
       if (graceOk) lastGrace = new Date(d);
@@ -360,88 +674,252 @@ function streakOf(h){
   }
   return streak;
 }
+const allDone = key => state.quests.length > 0 && state.quests.every(q => isDone(q,key));
+const totalCompletions = () =>
+  state.quests.reduce((n,q) => n + Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length, 0);
+const maxStreak = () => state.quests.length ? Math.max(...state.quests.map(streakOf)) : 0;
 
-/* ================= header ================= */
-function renderHeader(){
-  const now = new Date();
-  document.getElementById("dateLine").textContent =
-    now.toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"});
-  const hr = now.getHours();
-  const greet = hr < 5 ? "Night owl mode 🌙" : hr < 12 ? "Good morning! ☀️" : hr < 18 ? "Good afternoon! 🌤️" : "Good evening! 🌇";
-  document.getElementById("greeting").textContent = greet;
+/* ================= player: levels, ranks, titles ================= */
+function need(L){ return 100 + 20*(L-1); }
+function levelFromExp(exp){
+  let L = 1, rem = Math.max(0, exp|0);
+  while (rem >= need(L) && L < 999){ rem -= need(L); L++; }
+  return { level:L, into:rem, need:need(L) };
+}
+const RANKS = [["E",1,"#8b9bb4"],["D",5,"#34d399"],["C",10,"#4aa8ff"],["B",20,"#8b5cf6"],["A",35,"#ff5c6a"],["S",55,"#f5c542"]];
+function rankOf(level){
+  let r = RANKS[0];
+  for (const x of RANKS) if (level >= x[1]) r = x;
+  return { name:r[0], color:r[2] };
+}
+const TITLES = [
+  {id:"novice",   name:"Novice Hunter",        test:() => totalCompletions() >= 1},
+  {id:"wolf",     name:"Wolf Slayer",          test:() => maxStreak() >= 7},
+  {id:"awakened", name:"Awakened",             test:() => playerLevel() >= 10},
+  {id:"regular",  name:"Dungeon Regular",      test:() => totalCompletions() >= 100},
+  {id:"elite",    name:"Elite Hunter",         test:() => playerLevel() >= 25},
+  {id:"demon",    name:"Demon Slayer",         test:() => maxStreak() >= 30},
+  {id:"monarchC", name:"Monarch Candidate",    test:() => playerLevel() >= 50},
+  {id:"shadow",   name:"Shadow Monarch",       test:() => playerLevel() >= 55},
+  {id:"legend",   name:"Legend of the Gates",  test:() => totalCompletions() >= 500},
+  {id:"ruler",    name:"Ruler's Bane",         test:() => maxStreak() >= 100},
+];
+const playerLevel = () => levelFromExp(state.player.exp).level;
+const titleName = id => { const t = TITLES.find(t => t.id === id); return t ? t.name : null; };
 
-  const t = todayStr();
-  const total = state.habits.length;
-  const done = state.habits.filter(h => h.log[t]).length;
-  const ring = document.getElementById("ringFg");
-  const C = 2 * Math.PI * 33;
-  ring.style.strokeDashoffset = total ? C * (1 - done/total) : C;
-  document.getElementById("ringLabel").textContent = `${done}/${total}`;
-  document.getElementById("headSub").textContent =
-    total === 0 ? "Add a habit to get rolling" :
-    done === total ? "Perfect day — everything done! 🎉" :
-    done === 0 ? "Fresh start. You've got this!" :
-    `${total - done} to go — keep it up!`;
+function checkTitles(silent){
+  TITLES.forEach(t => {
+    if (!state.player.titles.includes(t.id) && t.test()){
+      state.player.titles.push(t.id);
+      if (!state.player.title) state.player.title = t.id;
+      if (!silent){ toast(`TITLE UNLOCKED — ${t.name}`); sfx.complete(); }
+    }
+  });
+}
+function checkLevelUp(){
+  const L = playerLevel();
+  if (L > state.player.seenLevel){
+    const from = state.player.seenLevel;
+    state.player.seenLevel = L;
+    showLevelUp(from, L);
+  } else if (L < state.player.seenLevel){
+    state.player.seenLevel = L;   // same-day XP reversal crossed a boundary back down
+  }
+}
+function grantXP(xp){ state.player.exp += xp; }
+function revokeXP(xp){ state.player.exp = Math.max(0, state.player.exp - xp); }
+
+let state = migrate();
+function save(){
+  const cutoff = fmt(addDays(new Date(), -2));
+  for (const k of Object.keys(state.meta.xpLedger)) if (k < cutoff) delete state.meta.xpLedger[k];
+  localStorage.setItem(V2_KEY, JSON.stringify(state));
 }
 
-/* ================= today: habits ================= */
+/* ================= sound (Web Audio, synthesized) ================= */
+const sfx = (() => {
+  let ctx = null, master = null;
+  function ensure(){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!ctx){ ctx = new AC(); master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination); }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  document.addEventListener("pointerdown", ensure, {once:true});
+  function blip(freq, type, dur, when, vol, glideTo){
+    if (state.player.muted || !ensure()) return;
+    const t0 = ctx.currentTime + (when || 0);
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur + .05);
+  }
+  return {
+    tick:     () => blip(880, "triangle", .05, 0, .06),
+    complete: () => { blip(987, "sine", .09, 0, .12); blip(1319, "sine", .2, .09, .12); blip(1325, "sine", .2, .09, .05); },
+    levelup:  () => { [523,659,784].forEach((f,i) => blip(f, "sawtooth", .13, i*.11, .07)); blip(1047, "sawtooth", .55, .33, .09); blip(1052, "sine", .55, .33, .05); },
+    warn:     () => { blip(110, "sawtooth", .3, 0, .12, 95); blip(55, "sine", .3, 0, .1); blip(110, "sawtooth", .3, .42, .12, 95); blip(55, "sine", .3, .42, .1); }
+  };
+})();
+
+/* ================= progress engine (XP rules live here) ================= */
+function setProgress(q, dateKey, value){
+  const t = todayStr();
+  const wasDone = isDone(q, dateKey);
+  const wasAll = allDone(t);
+  value = Math.max(0, Math.min(value, targetOf(q)));
+  if (value <= 0) delete q.log[dateKey]; else q.log[dateKey] = value;
+  if (value > 0 && dateKey < q.createdAt) q.createdAt = dateKey;   // backfill extends history
+  const nowDone = isDone(q, dateKey);
+
+  if (dateKey === t){   // XP only for today's gate — retro edits fix history, never EXP
+    const led = (state.meta.xpLedger[t] = state.meta.xpLedger[t] || {});
+    if (!wasDone && nowDone){
+      const xp = BASE_XP + 2*Math.min(streakOf(q), 15);
+      led[q.id] = xp; grantXP(xp);
+      sfx.complete();
+      toast(`QUEST CLEAR — +${xp} EXP`);
+      if (!wasAll && allDone(t)){
+        led._perfect = PERFECT_XP; grantXP(PERFECT_XP);
+        particles();
+        setTimeout(() => toast(`ALL GATES CLEARED — +${PERFECT_XP} BONUS EXP`), 900);
+      }
+    } else if (wasDone && !nowDone){
+      if (led[q.id]){ revokeXP(led[q.id]); delete led[q.id]; }
+      if (led._perfect && !allDone(t)){ revokeXP(led._perfect); delete led._perfect; }
+    } else if (value > 0){
+      sfx.tick();
+    }
+  }
+  checkTitles(false);
+  checkLevelUp();
+  save();
+  renderAll();
+}
+const toggleQuest = (q, dateKey) => setProgress(q, dateKey, isDone(q, dateKey) ? 0 : targetOf(q));
+
+function toggleTodo(td){
+  const t = todayStr();
+  const led = (state.meta.xpLedger[t] = state.meta.xpLedger[t] || {});
+  const key = "s:" + td.id;
+  td.done = !td.done;
+  if (td.done){ led[key] = SIDE_XP; grantXP(SIDE_XP); sfx.complete(); toast(`SIDE QUEST CLEAR — +${SIDE_XP} EXP`); }
+  else if (led[key]){ revokeXP(led[key]); delete led[key]; }
+  checkTitles(false); checkLevelUp(); save(); renderAll();
+}
+
+/* ================= header (STATUS window) ================= */
+function renderHeader(){
+  const now = new Date(), t = todayStr();
+  document.getElementById("dateLine").textContent =
+    now.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"}).toUpperCase();
+
+  const { level, into, need } = levelFromExp(state.player.exp);
+  document.getElementById("lvNum").textContent = level;
+  document.getElementById("playerName").textContent = state.player.name || "HUNTER";
+  const rk = rankOf(level);
+  const badge = document.getElementById("rankBadge");
+  badge.textContent = rk.name + "-RANK";
+  badge.style.color = rk.color;
+  const tl = document.getElementById("titleLine");
+  if (state.player.titles.length){
+    tl.disabled = false;
+    tl.textContent = state.player.title ? `« ${titleName(state.player.title)} »` : "« Select a title »";
+  } else { tl.disabled = true; tl.textContent = "— No Title —"; }
+  document.getElementById("expFill").style.width = (100*into/need) + "%";
+  document.getElementById("expText").textContent = `${into} / ${need} EXP`;
+
+  const total = state.quests.length;
+  const done = state.quests.filter(q => isDone(q,t)).length;
+  const C = 2*Math.PI*32;
+  document.getElementById("ringFg").style.strokeDashoffset = total ? C*(1 - done/total) : C;
+  document.getElementById("ringCount").textContent = `${done}/${total}`;
+  document.getElementById("headSub").textContent =
+    total === 0 ? "No quests registered. The System awaits your command." :
+    done === total ? "All gates cleared. The System acknowledges your strength." :
+    done === 0 ? "Daily Quests have arrived. Begin when ready, Hunter." :
+    `${total - done} gate${total-done>1?"s":""} remaining. Do not falter.`;
+
+  document.getElementById("muteBtn").textContent = state.player.muted ? "🔇" : "🔊";
+}
+
+/* ================= quest list ================= */
 const checkSVG = `<svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-10"/></svg>`;
 
-function renderHabits(){
-  const list = document.getElementById("habitList");
+function renderQuests(){
+  const list = document.getElementById("questList");
   const t = todayStr();
-  if (!state.habits.length){
-    list.innerHTML = `<li class="empty"><span class="big">🌅</span>No habits yet — tap “+ Add habit” to plant your first one!</li>`;
+  if (!state.quests.length){
+    list.innerHTML = `<li class="empty"><span class="big">⚔️</span>No Daily Quests registered.<br>Tap “+ NEW QUEST” to receive your first.</li>`;
     return;
   }
   list.innerHTML = "";
-  state.habits.forEach(h => {
+  state.quests.forEach(q => {
+    const done = isDone(q,t), prog = progressOf(q,t), tgt = targetOf(q);
     const li = document.createElement("li");
-    li.className = "habit" + (h.log[t] ? " done" : "");
-    li.style.setProperty("--hc", h.color);
-    const s = streakOf(h);
-    const meta = s > 0
-      ? `<span class="streak-hot">🔥 ${s} day${s>1?"s":""} streak</span>`
-      : `Start your streak today!`;
-    li.innerHTML = `
-      <button class="check" aria-label="Toggle ${h.name}">${checkSVG}</button>
-      <div class="habit-info">
-        <div class="habit-name">${h.emoji} ${esc(h.name)}</div>
-        <div class="habit-meta">${meta}</div>
-      </div>
-      <button class="more-btn" aria-label="Edit ${h.name}">⋯</button>`;
-    li.querySelector(".check").onclick = () => toggleHabit(h, t);
-    li.querySelector(".more-btn").onclick = () => openSheet(h);
+    li.className = "quest panel sortable" + (done ? " done" : "");
+    li.style.setProperty("--hc", q.color);
+    const s = streakOf(q);
+    const meta = done
+      ? `<span class="clear-tag">✔ CLEAR</span>${s>1?` &nbsp;<span class="streak-hot">🔥 ${s}d</span>`:""}`
+      : (s > 0 ? `<span class="streak-hot">🔥 ${s} day${s>1?"s":""} streak</span>` : `Begin your streak today`) +
+        (q.reminder ? ` &nbsp;<span class="rem-dot">⏰ ${q.reminder}</span>` : "");
+    const nameHTML = `<span class="q-emoji">${q.emoji}</span>${esc(q.name)}`;
+    if (q.target){
+      li.innerHTML = `
+        <span class="drag-handle" aria-hidden="true">⠿</span>
+        <div class="quest-info">
+          <div class="quest-name">${nameHTML}</div>
+          <div class="quest-meta">${meta}</div>
+          <div class="q-progress">
+            <div class="q-bar"><i style="width:${Math.min(100,100*prog/tgt)}%"></i></div>
+            <span class="q-count">${prog}/${tgt} ${esc(unitOf(q))}</span>
+          </div>
+        </div>
+        <div class="steppers">
+          <button class="step plus" aria-label="Add progress">＋</button>
+          <button class="step minus" aria-label="Remove progress">−</button>
+        </div>
+        <button class="more-btn" aria-label="Edit quest">⋯</button>`;
+      li.querySelector(".plus").onclick  = () => setProgress(q, t, prog + stepOf(q));
+      li.querySelector(".minus").onclick = () => setProgress(q, t, prog - stepOf(q));
+    } else {
+      li.innerHTML = `
+        <span class="drag-handle" aria-hidden="true">⠿</span>
+        <button class="check" aria-label="Toggle ${esc(q.name)}">${checkSVG}</button>
+        <div class="quest-info">
+          <div class="quest-name">${nameHTML}</div>
+          <div class="quest-meta">${meta}</div>
+        </div>
+        <button class="more-btn" aria-label="Edit quest">⋯</button>`;
+      li.querySelector(".check").onclick = () => toggleQuest(q, t);
+    }
+    li.querySelector(".more-btn").onclick = () => openQuestSheet(q);
     list.appendChild(li);
   });
 }
 
-function toggleHabit(h, dateKey){
-  const t = todayStr();
-  const wasAllDone = state.habits.length > 0 && state.habits.every(x => x.log[t]);
-  if (h.log[dateKey]) delete h.log[dateKey]; else h.log[dateKey] = true;
-  save(); renderAll();
-  const nowAllDone = state.habits.length > 0 && state.habits.every(x => x.log[t]);
-  if (!wasAllDone && nowAllDone && dateKey === t){ confetti(); toast("All habits done — amazing! 🎉"); }
-}
-
-/* ================= todos ================= */
+/* ================= side quests ================= */
 function renderTodos(){
   const list = document.getElementById("todoList");
   if (!state.todos.length){
-    list.innerHTML = `<li class="empty"><span class="big">📝</span>Nothing on the list. Enjoy the calm!</li>`;
+    list.innerHTML = `<li class="empty"><span class="big">🗡️</span>No side quests logged. The board is clear.</li>`;
     return;
   }
   list.innerHTML = "";
-  const sorted = [...state.todos].sort((a,b) => (a.done?1:0) - (b.done?1:0));
-  sorted.forEach(td => {
+  state.todos.forEach(td => {
     const li = document.createElement("li");
-    li.className = "todo" + (td.done ? " done" : "");
+    li.className = "todo panel sortable" + (td.done ? " done" : "");
     li.innerHTML = `
+      <span class="drag-handle" aria-hidden="true">⠿</span>
       <button class="check" aria-label="Toggle task">${checkSVG}</button>
       <div class="todo-text">${esc(td.text)}</div>
       <button class="del-btn" aria-label="Delete task">✕</button>`;
-    li.querySelector(".check").onclick = () => { td.done = !td.done; save(); renderTodos(); };
+    li.querySelector(".check").onclick = () => toggleTodo(td);
     li.querySelector(".del-btn").onclick = () => {
       state.todos = state.todos.filter(x => x.id !== td.id); save(); renderTodos();
     };
@@ -457,100 +935,209 @@ document.getElementById("todoForm").addEventListener("submit", e => {
   input.value = ""; save(); renderTodos();
 });
 
+/* ================= drag reorder (pointer events) ================= */
+function makeSortable(listEl, getArr){
+  let drag = null;
+  listEl.addEventListener("pointerdown", e => {
+    const handle = e.target.closest(".drag-handle");
+    if (!handle || !e.isPrimary) return;
+    const row = handle.closest("li.sortable");
+    if (!row) return;
+    e.preventDefault();
+    const items = [...listEl.querySelectorAll("li.sortable")];
+    const mids = items.map(it => { const r = it.getBoundingClientRect(); return r.top + r.height/2; });
+    drag = { row, items, mids, start: items.indexOf(row), cur: items.indexOf(row),
+             y: e.clientY, h: row.getBoundingClientRect().height + 9 };
+    row.classList.add("dragging");
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  listEl.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y;
+    drag.row.style.transform = `translateY(${dy}px)`;
+    const center = drag.mids[drag.start] + dy;
+    let ni = 0;
+    drag.mids.forEach((m,i) => { if (i !== drag.start && center > m) ni++; });
+    if (ni !== drag.cur){
+      drag.cur = ni;
+      drag.items.forEach((it,i) => {
+        if (it === drag.row) return;
+        let off = 0;
+        if (drag.start < ni && i > drag.start && i <= ni) off = -drag.h;
+        else if (drag.start > ni && i >= ni && i < drag.start) off = drag.h;
+        it.style.transition = "transform .15s";
+        it.style.transform = off ? `translateY(${off}px)` : "";
+      });
+    }
+  });
+  const end = () => {
+    if (!drag) return;
+    const { row, items, start, cur } = drag;
+    drag = null;
+    row.classList.remove("dragging");
+    items.forEach(it => { it.style.transform = ""; it.style.transition = ""; });
+    if (cur !== start){
+      const arr = getArr();
+      const [m] = arr.splice(start, 1);
+      arr.splice(cur, 0, m);
+      save(); renderAll();
+    }
+  };
+  listEl.addEventListener("pointerup", end);
+  listEl.addEventListener("pointercancel", end);
+}
+makeSortable(document.getElementById("questList"), () => state.quests);
+makeSortable(document.getElementById("todoList"),  () => state.todos);
+
 /* ================= week view ================= */
-const DAY_LETTERS = ["M","T","W","T","F","S","S"];
 function renderWeek(){
   const el = document.getElementById("tab-week");
   const today = new Date(); today.setHours(0,0,0,0);
   const monday = addDays(today, -((today.getDay()+6)%7));
-  if (!state.habits.length){
-    el.innerHTML = `<div class="empty"><span class="big">📅</span>Add some habits to see your week!</div>`;
+  if (!state.quests.length){
+    el.innerHTML = `<div class="empty"><span class="big">📅</span>Register Daily Quests to see your week.</div>`;
     return;
   }
   el.innerHTML = "";
-  state.habits.forEach(h => {
+  state.quests.forEach(q => {
     const card = document.createElement("div");
-    card.className = "week-card";
-    card.style.setProperty("--hc", h.color);
+    card.className = "week-card panel";
+    card.style.setProperty("--hc", q.color);
     let doneCount = 0, daysHTML = "";
     for (let i = 0; i < 7; i++){
-      const d = addDays(monday, i);
-      const key = fmt(d);
+      const d = addDays(monday, i), key = fmt(d);
       const isFuture = d > today;
-      const on = !!h.log[key];
+      const on = isDone(q, key);
+      const frac = q.target ? Math.min(1, progressOf(q,key)/targetOf(q)) : 0;
       if (on && !isFuture) doneCount++;
       daysHTML += `
         <div class="day-col">
           <span class="day-letter">${DAY_LETTERS[i]}</span>
-          <button class="day-dot${on?" on":""}${fmt(d)===todayStr()?" today-dot":""}${isFuture?" future":""}"
-                  data-date="${key}" ${isFuture?"disabled":""} aria-label="${h.name} on ${key}"></button>
+          <button class="day-dot${on?" on":""}${key===todayStr()?" today-dot":""}${isFuture?" future":""}"
+                  data-date="${key}" ${isFuture?"disabled":""} aria-label="${esc(q.name)} on ${key}">
+            ${(!on && frac>0) ? `<span class="fill" style="height:${Math.round(frac*100)}%"></span>` : ""}
+          </button>
         </div>`;
     }
     card.innerHTML = `
       <div class="week-card-head">
-        <span class="habit-name">${h.emoji} ${esc(h.name)}</span>
-        <span class="week-pct">${doneCount}/7 this week</span>
+        <span class="quest-name"><span class="q-emoji">${q.emoji}</span>${esc(q.name)}</span>
+        <span class="week-pct">${doneCount}/7 CLEARED</span>
       </div>
       <div class="week-days">${daysHTML}</div>`;
     card.querySelectorAll(".day-dot:not(.future)").forEach(btn => {
-      btn.onclick = () => toggleHabit(h, btn.dataset.date);
+      btn.onclick = () => {
+        if (q.target) openDayEditor(btn.dataset.date);   // amounts are ambiguous as a toggle
+        else toggleQuest(q, btn.dataset.date);
+      };
     });
     el.appendChild(card);
   });
   const note = document.createElement("div");
   note.className = "grace-note";
-  note.textContent = "🧡 Streaks forgive one missed day per week — bad days happen.";
+  note.textContent = "◈ The System forgives one missed day per week. Streaks endure.";
   el.appendChild(note);
 }
 
-/* ================= month view ================= */
+/* ================= records (month) ================= */
 let monthCursor = new Date(); monthCursor.setDate(1);
-const HEAT = ["#FAF1E8","#FFD9C4","#FFAD8E","#FF8168","#FF6B6B"];
-function renderMonth(){
+const HEAT = ["rgba(74,168,255,.06)","#123a6b","#1e5fae","#8b5cf6","#f5c542"];
+function renderRecords(){
   const el = document.getElementById("monthGrid");
   const y = monthCursor.getFullYear(), m = monthCursor.getMonth();
   document.getElementById("monthTitle").textContent =
-    monthCursor.toLocaleDateString(undefined,{month:"long", year:"numeric"});
+    monthCursor.toLocaleDateString(undefined,{month:"long", year:"numeric"}).toUpperCase();
   const today = new Date(); today.setHours(0,0,0,0);
   const firstDow = (new Date(y,m,1).getDay()+6)%7;
   const daysInMonth = new Date(y,m+1,0).getDate();
-  let html = ["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>`<div class="dow">${d}</div>`).join("");
+  let html = ["MO","TU","WE","TH","FR","SA","SU"].map(d=>`<div class="dow">${d}</div>`).join("");
   for (let i=0;i<firstDow;i++) html += `<div></div>`;
   for (let day=1; day<=daysInMonth; day++){
-    const d = new Date(y,m,day);
-    const key = fmt(d);
+    const d = new Date(y,m,day), key = fmt(d);
     const isFuture = d > today;
-    const existing = state.habits.filter(h => parseD(h.createdAt) <= d);
-    const done = existing.filter(h => h.log[key]).length;
+    const existing = state.quests.filter(q => parseD(q.createdAt) <= d);
+    const done = existing.filter(q => isDone(q,key)).length;
     let style = "", cls = "m-day";
     if (!isFuture && existing.length){
       const frac = done / existing.length;
       const idx = frac === 0 ? 0 : frac < .34 ? 1 : frac < .67 ? 2 : frac < 1 ? 3 : 4;
-      style = `background:${HEAT[idx]};${idx>=3?"color:#fff":""}`;
+      style = `background:${HEAT[idx]};${idx>=2?"color:#fff":""}${idx===4?";color:#3a2c00":""}`;
     }
     if (isFuture) cls += " future";
     if (key === todayStr()) cls += " is-today";
-    html += `<div class="${cls}" style="${style}" title="${done}/${existing.length} habits">${day}</div>`;
+    html += isFuture
+      ? `<div class="${cls}">${day}</div>`
+      : `<button class="${cls}" style="${style}" data-date="${key}" title="${done}/${existing.length} quests">${day}</button>`;
   }
   el.innerHTML = html;
+  el.querySelectorAll("button.m-day").forEach(btn => {
+    btn.onclick = () => openDayEditor(btn.dataset.date);
+  });
 }
-document.getElementById("prevMonth").onclick = () => { monthCursor.setMonth(monthCursor.getMonth()-1); renderMonth(); };
-document.getElementById("nextMonth").onclick = () => { monthCursor.setMonth(monthCursor.getMonth()+1); renderMonth(); };
+document.getElementById("prevMonth").onclick = () => { monthCursor.setMonth(monthCursor.getMonth()-1); renderRecords(); };
+document.getElementById("nextMonth").onclick = () => { monthCursor.setMonth(monthCursor.getMonth()+1); renderRecords(); };
+
+/* ================= day editor ================= */
+const dayOverlay = document.getElementById("dayOverlay");
+let dayEditorDate = null;
+function openDayEditor(dateKey){
+  dayEditorDate = dateKey;
+  renderDayEditor();
+  dayOverlay.classList.add("open");
+}
+function renderDayEditor(){
+  if (!dayEditorDate) return;
+  const d = parseD(dayEditorDate);
+  document.getElementById("dayTitle").textContent =
+    "GATE RECORDS — " + d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"}).toUpperCase();
+  const wrap = document.getElementById("dayRows");
+  const quests = state.quests;   // all quests editable — backfilling extends a quest's history
+  if (!quests.length){
+    wrap.innerHTML = `<div class="empty">No quests registered.</div>`;
+    return;
+  }
+  wrap.innerHTML = "";
+  quests.forEach(q => {
+    const prog = progressOf(q, dayEditorDate), tgt = targetOf(q), done = isDone(q, dayEditorDate);
+    const row = document.createElement("div");
+    row.className = "de-row" + (done ? " done" : "");
+    row.style.setProperty("--hc", q.color);
+    if (q.target){
+      row.innerHTML = `
+        <div class="quest-name"><span class="q-emoji">${q.emoji}</span>${esc(q.name)}</div>
+        <div class="de-steppers">
+          <button class="step minus" aria-label="Less">−</button>
+          <span class="de-count">${prog}/${tgt} ${esc(unitOf(q))}</span>
+          <button class="step plus" aria-label="More">＋</button>
+        </div>`;
+      row.querySelector(".plus").onclick  = () => setProgress(q, dayEditorDate, prog + stepOf(q));
+      row.querySelector(".minus").onclick = () => setProgress(q, dayEditorDate, prog - stepOf(q));
+    } else {
+      row.innerHTML = `
+        <button class="check" aria-label="Toggle">${checkSVG}</button>
+        <div class="quest-name"><span class="q-emoji">${q.emoji}</span>${esc(q.name)}</div>`;
+      row.querySelector(".check").onclick = () => toggleQuest(q, dayEditorDate);
+    }
+    wrap.appendChild(row);
+  });
+}
+document.getElementById("dayClose").onclick = () => { dayOverlay.classList.remove("open"); dayEditorDate = null; };
+dayOverlay.addEventListener("click", e => { if (e.target === dayOverlay){ dayOverlay.classList.remove("open"); dayEditorDate = null; } });
 
 /* ================= tabs ================= */
 document.querySelectorAll(".tabs button").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
-    ["today","week","month"].forEach(name => {
+    ["quests","week","records"].forEach(name => {
       document.getElementById("tab-"+name).hidden = name !== btn.dataset.tab;
     });
     renderAll();
   };
 });
 
-/* ================= habit sheet (add / edit) ================= */
-const overlay = document.getElementById("overlay");
-let editing = null, selEmoji = EMOJIS[0], selColor = PALETTE[0];
+/* ================= quest sheet (add / edit) ================= */
+const questOverlay = document.getElementById("questOverlay");
+let editing = null, selEmoji = EMOJIS[0], selColor = NEON[0];
 
 function buildPickers(){
   const er = document.getElementById("emojiRow");
@@ -563,53 +1150,156 @@ function buildPickers(){
   });
   const cr = document.getElementById("colorRow");
   cr.innerHTML = "";
-  PALETTE.forEach(c => {
+  NEON.forEach(c => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "color-opt" + (c === selColor ? " sel" : "");
-    b.style.background = c; b.setAttribute("aria-label", c);
+    b.style.background = c; b.style.color = c; b.setAttribute("aria-label", c);
     b.onclick = () => { selColor = c; buildPickers(); };
     cr.appendChild(b);
   });
 }
-function openSheet(habit){
-  editing = habit || null;
-  document.getElementById("sheetTitle").textContent = habit ? "Edit habit" : "New habit";
-  document.getElementById("habitNameInput").value = habit ? habit.name : "";
-  document.getElementById("deleteHabitBtn").hidden = !habit;
-  selEmoji = habit ? habit.emoji : EMOJIS[0];
-  selColor = habit ? habit.color : PALETTE[state.habits.length % PALETTE.length];
+const targetToggle = document.getElementById("targetToggle");
+const targetFields = document.getElementById("targetFields");
+const targetUnitSel = document.getElementById("targetUnit");
+const customUnitWrap = document.getElementById("customUnitWrap");
+targetToggle.onchange = () => targetFields.classList.toggle("hiddenblock", !targetToggle.checked);
+targetUnitSel.onchange = () => customUnitWrap.classList.toggle("hiddenblock", targetUnitSel.value !== "custom");
+document.getElementById("clearReminder").onclick = () => { document.getElementById("reminderInput").value = ""; };
+
+function openQuestSheet(quest){
+  editing = quest || null;
+  document.getElementById("sheetTitle").textContent = quest ? "EDIT QUEST" : "NEW QUEST";
+  document.getElementById("questNameInput").value = quest ? quest.name : "";
+  document.getElementById("deleteQuestBtn").hidden = !quest;
+  selEmoji = quest ? quest.emoji : EMOJIS[0];
+  selColor = quest ? quest.color : NEON[state.quests.length % NEON.length];
   buildPickers();
-  overlay.classList.add("open");
-  setTimeout(() => document.getElementById("habitNameInput").focus(), 250);
+  const tgt = quest && quest.target;
+  targetToggle.checked = !!tgt;
+  targetFields.classList.toggle("hiddenblock", !tgt);
+  document.getElementById("targetAmount").value = tgt ? tgt.amount : 30;
+  document.getElementById("targetStep").value = tgt ? tgt.step : 5;
+  const presets = ["min","hr","glasses","reps","pages"];
+  if (tgt && !presets.includes(tgt.unit)){
+    targetUnitSel.value = "custom";
+    document.getElementById("customUnit").value = tgt.unit;
+    customUnitWrap.classList.remove("hiddenblock");
+  } else {
+    targetUnitSel.value = tgt ? tgt.unit : "min";
+    document.getElementById("customUnit").value = "";
+    customUnitWrap.classList.add("hiddenblock");
+  }
+  document.getElementById("reminderInput").value = quest && quest.reminder ? quest.reminder : "";
+  const nn = document.getElementById("notifNote");
+  nn.textContent = ("Notification" in window)
+    ? "Alerts fire while this page is open in a tab."
+    : "Browser notifications unsupported here — in-app alerts only.";
+  questOverlay.classList.add("open");
+  setTimeout(() => document.getElementById("questNameInput").focus(), 250);
 }
-function closeSheet(){ overlay.classList.remove("open"); }
-overlay.addEventListener("click", e => { if (e.target === overlay) closeSheet(); });
-document.getElementById("addHabitBtn").onclick = () => openSheet(null);
-document.getElementById("saveHabitBtn").onclick = () => {
-  const name = document.getElementById("habitNameInput").value.trim();
-  if (!name){ document.getElementById("habitNameInput").focus(); return; }
-  if (editing){ editing.name = name; editing.emoji = selEmoji; editing.color = selColor; }
-  else state.habits.push({id:uid(), name, emoji:selEmoji, color:selColor, createdAt:todayStr(), log:{}});
-  save(); closeSheet(); renderAll();
+function closeQuestSheet(){ questOverlay.classList.remove("open"); }
+questOverlay.addEventListener("click", e => { if (e.target === questOverlay) closeQuestSheet(); });
+document.getElementById("addQuestBtn").onclick = () => openQuestSheet(null);
+
+document.getElementById("saveQuestBtn").onclick = () => {
+  const name = document.getElementById("questNameInput").value.trim();
+  if (!name){ document.getElementById("questNameInput").focus(); return; }
+  let target = null;
+  if (targetToggle.checked){
+    const amount = Math.max(1, parseInt(document.getElementById("targetAmount").value, 10) || 1);
+    const step = Math.max(1, parseInt(document.getElementById("targetStep").value, 10) || 1);
+    let unit = targetUnitSel.value;
+    if (unit === "custom") unit = (document.getElementById("customUnit").value.trim() || "units");
+    target = { amount, unit, step };
+  }
+  const reminder = document.getElementById("reminderInput").value || null;
+  const hadReminder = editing && editing.reminder;
+  if (editing){
+    editing.name = name; editing.emoji = selEmoji; editing.color = selColor;
+    editing.target = target; editing.reminder = reminder;
+  } else {
+    state.quests.push({id:uid(), name, emoji:selEmoji, color:selColor, createdAt:todayStr(), target, reminder, log:{}});
+  }
+  if (reminder && !hadReminder && ("Notification" in window) && Notification.permission === "default"){
+    try{ Notification.requestPermission(); }catch(_){}
+  }
+  save(); closeQuestSheet(); renderAll();
 };
-document.getElementById("deleteHabitBtn").onclick = () => {
+document.getElementById("deleteQuestBtn").onclick = () => {
   if (!editing) return;
-  if (!confirm(`Delete “${editing.name}” and its history?`)) return;
-  state.habits = state.habits.filter(h => h.id !== editing.id);
-  save(); closeSheet(); renderAll();
+  if (!confirm(`Abandon quest “${editing.name}” and its records?`)) return;
+  state.quests = state.quests.filter(q => q.id !== editing.id);
+  save(); closeQuestSheet(); renderAll();
 };
-document.getElementById("habitNameInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") document.getElementById("saveHabitBtn").click();
+document.getElementById("questNameInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("saveQuestBtn").click();
 });
 
-/* ================= confetti & toast ================= */
-function confetti(){
-  const colors = [...PALETTE, "#FFD93D", "#6BCB77"];
-  for (let i = 0; i < 60; i++){
+/* ================= hunter name ================= */
+const nameOverlay = document.getElementById("nameOverlay");
+function openNameSheet(){
+  document.getElementById("nameInput").value = state.player.name || "";
+  nameOverlay.classList.add("open");
+  setTimeout(() => document.getElementById("nameInput").focus(), 250);
+}
+document.getElementById("nameSave").onclick = () => {
+  const v = document.getElementById("nameInput").value.trim();
+  state.player.name = v || "Hunter";
+  save(); nameOverlay.classList.remove("open"); renderHeader();
+  toast(`REGISTERED — Welcome, ${state.player.name}.`);
+};
+document.getElementById("nameInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("nameSave").click();
+});
+document.getElementById("editNameBtn").onclick = openNameSheet;
+
+/* ================= title picker ================= */
+const titleOverlay = document.getElementById("titleOverlay");
+document.getElementById("titleLine").onclick = () => {
+  if (!state.player.titles.length) return;
+  const wrap = document.getElementById("titleOpts");
+  wrap.innerHTML = "";
+  TITLES.forEach(t => {
+    const unlocked = state.player.titles.includes(t.id);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "title-opt" + (state.player.title === t.id ? " sel" : "") + (unlocked ? "" : " title-locked");
+    b.textContent = unlocked ? `« ${t.name} »` : "🔒 ???";
+    if (unlocked) b.onclick = () => { state.player.title = t.id; save(); renderHeader(); titleOverlay.classList.remove("open"); };
+    wrap.appendChild(b);
+  });
+  titleOverlay.classList.add("open");
+};
+document.getElementById("titleClose").onclick = () => titleOverlay.classList.remove("open");
+titleOverlay.addEventListener("click", e => { if (e.target === titleOverlay) titleOverlay.classList.remove("open"); });
+
+/* ================= mute ================= */
+document.getElementById("muteBtn").onclick = () => {
+  state.player.muted = !state.player.muted;
+  save(); renderHeader();
+};
+
+/* ================= level up / effects ================= */
+const lvlOverlay = document.getElementById("lvlOverlay");
+let lvlTimer;
+function showLevelUp(from, to){
+  document.getElementById("lvlNums").textContent = `LV.${from}  →  LV.${to}`;
+  lvlOverlay.classList.add("show");
+  sfx.levelup();
+  particles();
+  clearTimeout(lvlTimer);
+  lvlTimer = setTimeout(() => lvlOverlay.classList.remove("show"), 2400);
+}
+lvlOverlay.addEventListener("click", () => lvlOverlay.classList.remove("show"));
+
+function particles(){
+  const colors = ["#4aa8ff","#8b5cf6","#22d3ee","#dbe9ff","#f5c542"];
+  for (let i = 0; i < 55; i++){
     const p = document.createElement("div");
-    p.className = "confetti";
+    p.className = "particle";
     p.style.left = Math.random()*100 + "vw";
-    p.style.background = colors[i % colors.length];
+    const c = colors[i % colors.length];
+    p.style.background = c; p.style.color = c;
     p.style.animationDelay = Math.random()*0.4 + "s";
     p.style.setProperty("--x", (Math.random()*160-80) + "px");
     p.style.setProperty("--r", (Math.random()*720-360) + "deg");
@@ -626,19 +1316,59 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
 }
+function sysAlert(msg){
+  const el = document.createElement("div");
+  el.className = "sys-alert";
+  el.innerHTML = `<b>[ SYSTEM ]</b>${esc(msg)}`;
+  document.getElementById("alertStack").appendChild(el);
+  setTimeout(() => el.remove(), 7000);
+}
 
-/* ================= misc ================= */
-function esc(s){ return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+/* ================= reminders & penalty (system tick) ================= */
+const warnBanner = document.getElementById("warnBanner");
+document.getElementById("warnClose").onclick = () => warnBanner.classList.remove("show");
+let lastDay = todayStr();
 
+function systemTick(){
+  const t = todayStr();
+  if (t !== lastDay){ lastDay = t; renderAll(); }   // midnight rollover
+  const now = new Date();
+  const hm = pad(now.getHours()) + ":" + pad(now.getMinutes());
+  let dirty = false;
+  state.quests.forEach(q => {
+    if (q.reminder && hm >= q.reminder && !isDone(q,t) && state.meta.remindersFired[q.id] !== t){
+      state.meta.remindersFired[q.id] = t; dirty = true;
+      sysAlert(`Quest available: ${q.emoji} ${q.name}${q.target?` — ${targetOf(q)} ${unitOf(q)}`:""}`);
+      sfx.complete();
+      if ("Notification" in window && Notification.permission === "granted"){
+        try{ new Notification("[SYSTEM] Daily Quest", { body:`${q.name} awaits completion, Hunter.` }); }catch(_){}
+      }
+    }
+  });
+  if (now.getHours() >= 20 && state.quests.some(q => !isDone(q,t)) && state.meta.warnedOn !== t){
+    state.meta.warnedOn = t; dirty = true;
+    warnBanner.classList.add("show");
+    sfx.warn();
+  }
+  if (dirty) save();
+}
+setInterval(systemTick, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) systemTick(); });
+
+/* ================= boot ================= */
 function renderAll(){
   renderHeader();
-  renderHabits();
+  renderQuests();
   renderTodos();
   renderWeek();
-  renderMonth();
+  renderRecords();
+  if (dayEditorDate) renderDayEditor();
 }
-renderAll();
+checkTitles(true);       // unlock silently for migrated history — no toast spam on load
 save();
+renderAll();
+if (!state.player.name) openNameSheet();
+systemTick();
 </script>
 </body>
 </html>
