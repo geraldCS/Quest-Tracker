@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060d">
+<title>ARISE — Daily Quest System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div class="warn-banner" id="warnBanner">
+  <span>⚠ WARNING — Daily Quests incomplete. Complete your quests, Hunter, or face a penalty.</span>
+  <button id="warnClose" aria-label="Dismiss warning">✕</button>
+</div>
+<div class="alert-stack" id="alertStack"></div>
+
+<div class="app">
+  <header class="status-win panel">
+    <div class="status-top">
+      <span class="sys-tag">⬢ STATUS</span>
+      <span class="date-line" id="dateLine"></span>
+      <div class="top-btns">
+        <button class="icon-btn" id="exportBtn" aria-label="Export save file" title="Export save file">⤓</button>
+        <button class="icon-btn" id="importBtn" aria-label="Import save file" title="Import save file">⤒</button>
+        <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="status-main">
+      <div class="lv-block">
+        <span class="lv-label">LV.</span>
+        <span class="lv-num" id="lvNum">1</span>
+      </div>
+      <div class="status-info">
+        <div class="player-line">
+          <span class="p-label">PLAYER:</span>
+          <span class="p-name" id="playerName">HUNTER</span>
+          <button class="edit-name" id="editNameBtn" aria-label="Edit name">✎</button>
+          <span class="rank-badge" id="rankBadge">E</span>
+        </div>
+        <button class="title-line" id="titleLine">— No Title —</button>
+        <div class="exp-bar"><i id="expFill"></i></div>
+        <div class="exp-text" id="expText">0 / 100 EXP</div>
+      </div>
+      <div class="ring-wrap">
+        <svg width="76" height="76" viewBox="0 0 76 76">
+          <circle class="ring-bg" cx="38" cy="38" r="32" fill="none" stroke-width="6"/>
+          <circle class="ring-fg" id="ringFg" cx="38" cy="38" r="32" fill="none" stroke-width="6"
+                  stroke-dasharray="201.1" stroke-dashoffset="201.1"/>
+        </svg>
+        <div class="ring-label"><b id="ringCount">0/0</b><span>GATE</span></div>
+      </div>
+    </div>
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="head-sub" id="headSub"></div>
+  </header>
+
+  <nav class="tabs panel">
+    <button data-tab="quests" class="active">QUESTS</button>
+    <button data-tab="week">WEEK</button>
+    <button data-tab="records">RECORDS</button>
+  </nav>
+
+  <main>
+    <section id="tab-quests">
+      <div class="section-head">
+        <h2>DAILY QUESTS <span class="head-date" id="questsDate"></span></h2>
+        <button class="pill-btn" id="addQuestBtn">+ NEW QUEST</button>
+      </div>
+      <ul id="questList"></ul>
+
+      <div class="section-head"><h2>SIDE QUESTS</h2></div>
+      <form class="todo-form" id="todoForm">
+        <input type="text" id="todoInput" placeholder="Log a side quest…" maxlength="80" autocomplete="off">
+        <button type="submit" aria-label="Add side quest">+</button>
+      </form>
+      <ul id="todoList"></ul>
+    </section>
+
+    <section id="tab-week" hidden></section>
+
+    <section id="tab-records" hidden>
+      <div class="month-nav">
+        <button id="prevMonth" aria-label="Previous month">‹</button>
+        <h3 id="monthTitle"></h3>
+        <button id="nextMonth" aria-label="Next month">›</button>
+      </div>
+      <div class="month-grid panel" id="monthGrid"></div>
+      <div class="legend">
+        Less <i style="background:rgba(74,168,255,.06)"></i><i style="background:#123a6b"></i><i style="background:#1e5fae"></i><i style="background:#8b5cf6"></i><i style="background:#f5c542"></i> More
+      </div>
+      <div class="records-hint">Tap any past day to edit its records — no EXP for past gates.</div>
+    </section>
+  </main>
+</div>
+
+<!-- quest add/edit -->
+<div class="overlay" id="questOverlay">
+  <div class="sheet">
+    <h3 id="sheetTitle">NEW QUEST</h3>
+    <label>Quest name</label>
+    <input type="text" id="questNameInput" placeholder="e.g. Train body" maxlength="40" autocomplete="off">
+    <label>Stat — which attribute does this quest train?</label>
+    <div class="stat-picker" id="statPicker"></div>
+    <label>Color</label>
+    <div class="color-row" id="colorRow"></div>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="targetToggle">
+      <span>Set a target amount (e.g. 30 min)</span>
+    </div>
+    <div id="targetFields" class="hiddenblock">
+      <div class="field-row">
+        <div><label>Amount</label><input type="number" id="targetAmount" min="1" max="9999" value="30"></div>
+        <div><label>Unit</label>
+          <select id="targetUnit">
+            <option value="min">min</option>
+            <option value="hr">hr</option>
+            <option value="glasses">glasses</option>
+            <option value="reps">reps</option>
+            <option value="pages">pages</option>
+            <option value="custom">custom…</option>
+          </select>
+        </div>
+      </div>
+      <div id="customUnitWrap" class="hiddenblock">
+        <label>Custom unit</label>
+        <input type="text" id="customUnit" placeholder="e.g. km" maxlength="12">
+      </div>
+    </div>
+
+    <label>Reminder (optional)</label>
+    <div class="field-row">
+      <div><input type="time" id="reminderInput"></div>
+      <div style="flex:0"><button type="button" class="icon-btn" id="clearReminder" title="Clear reminder" style="height:44px;width:44px">✕</button></div>
+    </div>
+    <div class="sheet-note" id="notifNote">Alerts fire while this page is open in a tab.</div>
+
+    <div class="sheet-actions">
+      <button class="danger-btn" id="deleteQuestBtn" hidden>DELETE</button>
+      <button class="pill-btn" id="saveQuestBtn">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- day editor -->
+<div class="overlay" id="dayOverlay">
+  <div class="sheet">
+    <h3 id="dayTitle">GATE RECORDS</h3>
+    <div id="dayRows"></div>
+    <div class="sheet-note">Editing past records fixes history and streaks. No EXP is awarded for past gates.</div>
+    <div class="sheet-actions"><button class="pill-btn" id="dayClose">CLOSE</button></div>
+  </div>
+</div>
+
+<!-- hunter name -->
+<div class="overlay" id="nameOverlay">
+  <div class="sheet">
+    <h3>SYSTEM REGISTRATION</h3>
+    <div class="sheet-note" style="margin-top:0">You have been recognized as a Player. State your name, Hunter.</div>
+    <label>Hunter name</label>
+    <input type="text" id="nameInput" placeholder="Sung Jin-Woo" maxlength="20" autocomplete="off">
+    <div class="sheet-actions"><button class="pill-btn" id="nameSave">CONFIRM</button></div>
+  </div>
+</div>
+
+<!-- title picker -->
+<div class="overlay" id="titleOverlay">
+  <div class="sheet">
+    <h3>TITLES</h3>
+    <div id="titleOpts"></div>
+    <div class="sheet-actions"><button class="pill-btn" id="titleClose">CLOSE</button></div>
+  </div>
+</div>
+
+<div class="lvl-overlay" id="lvlOverlay">
+  <div>
+    <div class="lvl-word">LEVEL UP!</div>
+    <div class="lvl-nums" id="lvlNums"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
