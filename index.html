@@ -28,6 +28,7 @@
       <span class="sys-tag">⬢ STATUS</span>
       <span class="date-line" id="dateLine"></span>
       <div class="top-btns">
+        <button class="icon-btn" id="syncBtn" aria-label="Device sync settings" title="Device sync">○</button>
         <button class="icon-btn" id="exportBtn" aria-label="Export save file" title="Export save file">⤓</button>
         <button class="icon-btn" id="importBtn" aria-label="Import save file" title="Import save file">⤒</button>
         <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
@@ -71,18 +72,28 @@
 
   <main>
     <section id="tab-quests">
-      <div class="section-head">
-        <h2>DAILY QUESTS <span class="head-date" id="questsDate"></span></h2>
-        <button class="pill-btn" id="addQuestBtn">+ NEW QUEST</button>
+      <div class="seg-row panel">
+        <button class="seg active" data-seg="daily">DAILY QUESTS</button>
+        <button class="seg" data-seg="side">SIDE QUESTS <span class="seg-count" id="sideCount" hidden></span></button>
       </div>
-      <ul id="questList"></ul>
 
-      <div class="section-head"><h2>SIDE QUESTS</h2></div>
-      <form class="todo-form" id="todoForm">
-        <input type="text" id="todoInput" placeholder="Log a side quest…" maxlength="80" autocomplete="off">
-        <button type="submit" aria-label="Add side quest">+</button>
-      </form>
-      <ul id="todoList"></ul>
+      <div id="seg-daily">
+        <button class="raid-panel panel" id="raidPanel" hidden aria-label="Open gate raid details"></button>
+        <div class="section-head">
+          <h2>DAILY QUESTS <span class="head-date" id="questsDate"></span></h2>
+          <button class="pill-btn" id="addQuestBtn">+ NEW QUEST</button>
+        </div>
+        <ul id="questList"></ul>
+      </div>
+
+      <div id="seg-side" hidden>
+        <div class="section-head"><h2>SIDE QUESTS</h2></div>
+        <form class="todo-form" id="todoForm">
+          <input type="text" id="todoInput" placeholder="Log a side quest…" maxlength="200" autocomplete="off">
+          <button type="submit" aria-label="Add side quest">+</button>
+        </form>
+        <ul id="todoList"></ul>
+      </div>
     </section>
 
     <section id="tab-week" hidden></section>
@@ -137,6 +148,18 @@
       </div>
     </div>
 
+    <label>Days per week</label>
+    <select id="freqSelect">
+      <option value="7">Every day</option>
+      <option value="6">6 days a week</option>
+      <option value="5">5 days a week</option>
+      <option value="4">4 days a week</option>
+      <option value="3">3 days a week</option>
+      <option value="2">2 days a week</option>
+      <option value="1">1 day a week</option>
+    </select>
+    <div class="sheet-note">Fewer than 7? Any days count — once the weekly goal is met, this gate goes exempt until Monday.</div>
+
     <label>Reminder (optional)</label>
     <div class="field-row">
       <div><input type="time" id="reminderInput"></div>
@@ -172,6 +195,53 @@
   </div>
 </div>
 
+<!-- side quest editor -->
+<div class="overlay" id="todoOverlay">
+  <div class="sheet">
+    <h3>SIDE QUEST</h3>
+    <label>Description</label>
+    <textarea id="todoTextInput" maxlength="200" rows="3" placeholder="What needs doing, Hunter?"></textarea>
+    <label>Difficulty</label>
+    <div class="diff-row" id="diffRow"></div>
+    <div class="toggle-row">
+      <input type="checkbox" id="todoDailyChk">
+      <span>Daily — resets at midnight</span>
+    </div>
+    <div class="sheet-actions">
+      <button class="danger-btn" id="todoDeleteBtn">DELETE</button>
+      <button class="pill-btn" id="todoSaveBtn">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- device sync -->
+<div class="overlay" id="syncOverlay">
+  <div class="sheet">
+    <h3>DEVICE SYNC</h3>
+    <div class="sheet-note" style="margin-top:0" id="syncInfo"></div>
+    <label>GitHub token</label>
+    <input type="password" id="syncTokenInput" placeholder="github_pat_…" autocomplete="off">
+    <div class="sheet-note">Your save lives in a <b>private gist</b> on your GitHub account and merges across devices — nothing is ever overwritten. Create a token at GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> with only <b>Gists: read &amp; write</b>, then paste it here on each device. The token never leaves this device.</div>
+    <div class="sheet-actions">
+      <button class="danger-btn" id="syncDisconnectBtn" hidden>DISCONNECT</button>
+      <button class="pill-btn" id="syncConnectBtn">CONNECT</button>
+    </div>
+    <div class="sheet-actions"><button class="pill-btn" id="syncClose">CLOSE</button></div>
+  </div>
+</div>
+
+<!-- gate raid / boss sheet -->
+<div class="overlay" id="raidOverlay">
+  <div class="sheet">
+    <h3>GATE RAID</h3>
+    <div id="raidDetail"></div>
+    <label>Rune Collection</label>
+    <div class="rune-grid" id="runeGrid"></div>
+    <div class="sheet-note">Each quest clear deals 10 DMG; a perfect day crits for +15. Slay the boss by Sunday to claim its rune — each awake rune adds +1 EXP per clear (max +5). If a boss escapes, your runes sleep until you land 3 clears the following week.</div>
+    <div class="sheet-actions"><button class="pill-btn" id="raidClose">CLOSE</button></div>
+  </div>
+</div>
+
 <!-- title picker -->
 <div class="overlay" id="titleOverlay">
   <div class="sheet">
@@ -191,5 +261,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
+<script src="sync.js"></script>
 </body>
 </html>

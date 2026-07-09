@@ -293,7 +293,7 @@
     margin-bottom:16px;color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
   }
   .sheet label{display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.15em;font-family:var(--font-head)}
-  .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet select{
+  .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet input[type=password],.sheet select{
     width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
     font:inherit;color:var(--ink);outline:none;background:rgba(0,0,0,.35);
   }
@@ -471,6 +471,9 @@
 
   /* ============ header buttons ============ */
   .top-btns{display:flex;gap:6px}
+  #syncBtn.spin{color:var(--sys);animation:syncspin 1s linear infinite}
+  @keyframes syncspin{to{transform:rotate(360deg)}}
+  #syncBtn.err{color:var(--danger);border-color:rgba(255,59,78,.4)}
 
   /* ============ themed scrollbar ============ */
   .sheet{scrollbar-width:thin;scrollbar-color:rgba(74,168,255,.5) transparent}
@@ -479,9 +482,111 @@
   .sheet::-webkit-scrollbar-thumb{background:rgba(74,168,255,.45);border-radius:3px}
   .sheet::-webkit-scrollbar-thumb:hover{background:var(--sys)}
 
+  /* ============ daily / side segments ============ */
+  .seg-row{display:flex;gap:6px;padding:5px;margin-top:16px}
+  .seg{
+    flex:1;border:0;background:transparent;font-family:var(--font-head);font-size:.68rem;
+    font-weight:700;letter-spacing:.14em;padding:10px 0;border-radius:7px;
+    color:var(--ink-soft);cursor:pointer;transition:all .2s;
+    display:flex;align-items:center;justify-content:center;gap:7px;
+  }
+  .seg.active{
+    background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    box-shadow:0 0 14px var(--sys-glow);
+  }
+  .seg-count{
+    font-family:var(--font-body);font-size:.7rem;font-weight:700;line-height:1;
+    background:var(--violet);color:#fff;border-radius:9px;padding:2px 7px;
+    box-shadow:0 0 8px rgba(139,92,246,.6);
+  }
+
+  /* ============ gate raid panel ============ */
+  .raid-panel{
+    display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:var(--ink);
+    padding:13px 15px;margin-top:14px;
+    border-color:rgba(255,92,74,.35);
+    box-shadow:0 0 18px rgba(255,92,59,.15), inset 0 0 24px rgba(255,92,59,.05);
+  }
+  .raid-panel.slain{border-color:rgba(245,197,66,.45);box-shadow:0 0 18px rgba(245,197,66,.2), inset 0 0 24px rgba(245,197,66,.06)}
+  .raid-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .raid-tag{
+    font-family:var(--font-head);font-size:.62rem;letter-spacing:.3em;font-weight:700;
+    color:#ff7a5c;text-shadow:0 0 8px rgba(255,92,59,.5);
+  }
+  .raid-panel.slain .raid-tag{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.5)}
+  .raid-days{font-family:var(--font-head);font-size:.6rem;letter-spacing:.15em;color:var(--ink-soft);font-weight:700}
+  .enrage-tag{color:var(--danger);text-shadow:0 0 8px rgba(255,59,78,.7);animation:pulse 1.6s infinite}
+  .raid-name{
+    font-family:var(--font-head);font-weight:900;font-size:.92rem;letter-spacing:.08em;
+    margin-bottom:8px;text-shadow:0 0 10px rgba(255,122,92,.35);
+  }
+  .hp-bar{
+    height:9px;border:1px solid rgba(255,92,74,.4);border-radius:5px;
+    background:rgba(0,0,0,.4);overflow:hidden;
+  }
+  .hp-bar i{
+    display:block;height:100%;border-radius:4px;transition:width .5s cubic-bezier(.22,1,.36,1);
+    background:linear-gradient(90deg,#ff5c3b,#f5c542);
+    box-shadow:0 0 10px rgba(255,92,59,.5);
+  }
+  .raid-sub{font-size:.74rem;color:var(--ink-soft);font-weight:700;letter-spacing:.08em;margin-top:6px;font-family:var(--font-head)}
+
+  /* ============ rune collection ============ */
+  .rune-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
+  .rune-cell{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    border:1px solid var(--line-dim);border-radius:9px;background:rgba(0,0,0,.25);
+    padding:10px 4px;
+  }
+  .rune-cell svg{width:20px;height:20px;filter:drop-shadow(0 0 4px currentColor)}
+  .rune-cell span{font-family:var(--font-head);font-size:.56rem;letter-spacing:.1em;font-weight:700;color:var(--ink)}
+  .rune-cell.dormant{opacity:.35;filter:grayscale(.7)}
+
+  /* ============ quest mastery rank badge ============ */
+  .m-rank{
+    font-family:var(--font-head);font-size:.6rem;font-weight:900;
+    border:1px solid currentColor;border-radius:5px;padding:1px 5px;margin-left:7px;
+    text-shadow:0 0 6px currentColor;vertical-align:1.5px;
+  }
+  .week-bit{font-size:.72rem;color:var(--ink-soft);font-weight:700}
+
+  /* ============ side quest editor ============ */
+  .sheet textarea{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
+    font:inherit;color:var(--ink);outline:none;background:rgba(0,0,0,.35);resize:vertical;min-height:74px;
+  }
+  .sheet textarea:focus{border-color:var(--sys);box-shadow:0 0 10px var(--sys-glow)}
+  .diff-row{display:flex;gap:8px}
+  .diff-opt{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:10px 4px;border-radius:9px;border:1px solid var(--line-dim);
+    background:rgba(219,233,255,.05);cursor:pointer;transition:all .15s;
+    font-family:var(--font-head);font-size:.62rem;letter-spacing:.12em;font-weight:700;color:var(--ink-soft);
+  }
+  .diff-opt span{font-family:var(--font-body);font-size:.7rem;color:var(--ink-soft)}
+  .diff-opt.sel{border-color:var(--sys);background:rgba(74,168,255,.15);box-shadow:0 0 10px var(--sys-glow);color:var(--ink)}
+  .diff-tag{
+    font-family:var(--font-head);font-size:.5rem;letter-spacing:.1em;font-weight:700;
+    border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:7px;vertical-align:1.5px;white-space:nowrap;
+  }
+  .diff-tag.normal{color:#34d399;border-color:rgba(52,211,153,.4)}
+  .diff-tag.hard{color:#ff5c6a;border-color:rgba(255,92,106,.4)}
+  .todo-text{
+    cursor:pointer;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+
+  /* ============ drag lift ============ */
+  .drag-handle{padding:10px 6px}
+  .quest.dragging,.todo.dragging{
+    box-shadow:0 6px 30px rgba(0,0,0,.5), 0 0 26px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.12);
+  }
+
   @media (max-width:400px){
     .stat-cell b{font-size:.74rem}
     .status-main{gap:10px}
+    .raid-name{font-size:.8rem}
   }
 
   @media (prefers-reduced-motion: reduce){
