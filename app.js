@@ -69,7 +69,7 @@ function baseState(){
     version: 2,
     player: { name:null, exp:0, title:null, titles:[], muted:false, seenLevel:1 },
     quests: [], todos: [],
-    meta: { xpLedger:{}, remindersFired:{}, warnedOn:null }
+    meta: { xpLedger:{}, remindersFired:{}, warnedOn:null, deleted:{} }
   };
 }
 function defaultState(){
@@ -94,6 +94,7 @@ function normalize(st){
     return q;
   });
   st.todos = (st.todos || []).map(td => Object.assign({daily:false, doneOn:null, rewardedOn:null, diff:"easy"}, td));
+  if (!st.meta.deleted || typeof st.meta.deleted !== "object") st.meta.deleted = {};
   return st;
 }
 function migrate(){
@@ -308,6 +309,8 @@ let state = normalize(migrate());
 function save(){
   const cutoff = fmt(addDays(new Date(), -2));
   for (const k of Object.keys(state.meta.xpLedger)) if (k < cutoff) delete state.meta.xpLedger[k];
+  const tombCutoff = fmt(addDays(new Date(), -90));   // tombstones only need to outlive sync gaps
+  for (const id of Object.keys(state.meta.deleted)) if (state.meta.deleted[id] < tombCutoff) delete state.meta.deleted[id];
   try{
     localStorage.setItem(V2_KEY, JSON.stringify(state));
   }catch(e){
@@ -585,6 +588,7 @@ function renderTodos(){
       toast(td.daily ? "SIDE QUEST SET TO DAILY — resets at midnight" : "SIDE QUEST SET TO ONE-OFF");
     };
     li.querySelector(".del-btn").onclick = () => {
+      state.meta.deleted[td.id] = todayStr();
       state.todos = state.todos.filter(x => x.id !== td.id); save(); renderTodos();
     };
     list.appendChild(li);
@@ -642,6 +646,7 @@ document.getElementById("todoSaveBtn").onclick = () => {
 };
 document.getElementById("todoDeleteBtn").onclick = () => {
   if (!editingTodo) return;
+  state.meta.deleted[editingTodo.id] = todayStr();
   state.todos = state.todos.filter(x => x.id !== editingTodo.id);
   save(); closeTodoSheet(); renderTodos();
 };
@@ -1035,6 +1040,7 @@ document.getElementById("saveQuestBtn").onclick = () => {
 document.getElementById("deleteQuestBtn").onclick = () => {
   if (!editing) return;
   if (!confirm(`Abandon quest “${editing.name}” and its records?`)) return;
+  state.meta.deleted[editing.id] = todayStr();   // tombstone so sync propagates the deletion
   state.quests = state.quests.filter(q => q.id !== editing.id);
   save(); closeQuestSheet(); renderAll();
 };

@@ -28,6 +28,7 @@
       <span class="sys-tag">⬢ STATUS</span>
       <span class="date-line" id="dateLine"></span>
       <div class="top-btns">
+        <button class="icon-btn" id="syncBtn" aria-label="Device sync settings" title="Device sync">○</button>
         <button class="icon-btn" id="exportBtn" aria-label="Export save file" title="Export save file">⤓</button>
         <button class="icon-btn" id="importBtn" aria-label="Import save file" title="Import save file">⤒</button>
         <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
@@ -213,6 +214,22 @@
   </div>
 </div>
 
+<!-- device sync -->
+<div class="overlay" id="syncOverlay">
+  <div class="sheet">
+    <h3>DEVICE SYNC</h3>
+    <div class="sheet-note" style="margin-top:0" id="syncInfo"></div>
+    <label>GitHub token</label>
+    <input type="password" id="syncTokenInput" placeholder="github_pat_…" autocomplete="off">
+    <div class="sheet-note">Your save lives in a <b>private gist</b> on your GitHub account and merges across devices — nothing is ever overwritten. Create a token at GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> with only <b>Gists: read &amp; write</b>, then paste it here on each device. The token never leaves this device.</div>
+    <div class="sheet-actions">
+      <button class="danger-btn" id="syncDisconnectBtn" hidden>DISCONNECT</button>
+      <button class="pill-btn" id="syncConnectBtn">CONNECT</button>
+    </div>
+    <div class="sheet-actions"><button class="pill-btn" id="syncClose">CLOSE</button></div>
+  </div>
+</div>
+
 <!-- gate raid / boss sheet -->
 <div class="overlay" id="raidOverlay">
   <div class="sheet">
@@ -244,5 +261,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
+<script src="sync.js"></script>
 </body>
 </html>

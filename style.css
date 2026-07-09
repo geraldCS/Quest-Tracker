@@ -293,7 +293,7 @@
     margin-bottom:16px;color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
   }
   .sheet label{display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.15em;font-family:var(--font-head)}
-  .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet select{
+  .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet input[type=password],.sheet select{
     width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
     font:inherit;color:var(--ink);outline:none;background:rgba(0,0,0,.35);
   }
@@ -471,6 +471,9 @@
 
   /* ============ header buttons ============ */
   .top-btns{display:flex;gap:6px}
+  #syncBtn.spin{color:var(--sys);animation:syncspin 1s linear infinite}
+  @keyframes syncspin{to{transform:rotate(360deg)}}
+  #syncBtn.err{color:var(--danger);border-color:rgba(255,59,78,.4)}
 
   /* ============ themed scrollbar ============ */
   .sheet{scrollbar-width:thin;scrollbar-color:rgba(74,168,255,.5) transparent}
