@@ -1,5 +1,5 @@
 /* ARISE service worker — cache-first app shell so the tracker works offline */
-const CACHE = "arise-v1";
+const CACHE = "arise-v2";
 const SHELL = [
   "./",
   "index.html",

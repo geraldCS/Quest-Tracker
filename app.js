@@ -23,6 +23,35 @@ const STAT_ICONS = {
 const glyphOf = q => `<span class="q-glyph">${STAT_ICONS[q.stat] || STAT_ICONS.str}</span>`;
 /* legacy emoji → stat, for migrating old saves */
 const EMOJI_STAT = {"💪":"str","⚔️":"str","🛡️":"str","🏃":"agi","🧹":"agi","📖":"int","✍️":"int","💧":"vit","🥗":"vit","😴":"vit","🧘":"wis","🌅":"wis"};
+
+/* quest mastery tiers: [letter, lifetime clears needed, color, flat XP bonus] */
+const MASTERY = [["E",0,"#8b9bb4",0],["D",10,"#34d399",2],["C",25,"#4aa8ff",4],["B",50,"#8b5cf6",6],["A",100,"#ff5c6a",8],["S",200,"#f5c542",10]];
+
+/* side quest difficulty → XP */
+const DIFF_XP = { easy:5, normal:10, hard:15 };
+const diffXP = td => DIFF_XP[td.diff] || DIFF_XP.easy;
+
+/* weekly gate bosses — picked deterministically per week */
+const BOSSES = [
+  "IGRIS, BLOOD-RED COMMANDER",
+  "KARGALGAN, HIGH ORC SHAMAN",
+  "BARAN, THE WHITE FLAME MONARCH",
+  "TUSK OF THE GIANT'S GATE",
+  "CERBERUS, HELLHOUND WARDEN",
+  "VULCAN, ARMORED DEMON KNIGHT",
+  "THE ARCHITECT OF THE TRIAL",
+  "METUS, PHANTOM OF THE MIST",
+  "GRAVAK, STONE GOLEM TYRANT",
+  "SILA, QUEEN OF THE SWARM"
+];
+const RUNE_TYPES = [
+  { id:"iron",    stat:"str", name:"Rune of Iron" },
+  { id:"haste",   stat:"agi", name:"Rune of Haste" },
+  { id:"vigor",   stat:"vit", name:"Rune of Vigor" },
+  { id:"focus",   stat:"int", name:"Rune of Focus" },
+  { id:"insight", stat:"wis", name:"Rune of Insight" }
+];
+const hashStr = s => { let h = 0; for (const c of s) h = (h*31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
 const BASE_XP = 20, SIDE_XP = 5, PERFECT_XP = 25;
 const DAY_LETTERS = ["M","T","W","T","F","S","S"];
 
@@ -61,9 +90,10 @@ function normalize(st){
   st.quests = (st.quests || []).map(q => {
     if (!STATS[q.stat]) q.stat = EMOJI_STAT[q.emoji] || "str";
     if (q.target && "step" in q.target) delete q.target.step;
+    q.freq = Math.min(7, Math.max(1, parseInt(q.freq, 10) || 7));
     return q;
   });
-  st.todos = (st.todos || []).map(td => Object.assign({daily:false, doneOn:null, rewardedOn:null}, td));
+  st.todos = (st.todos || []).map(td => Object.assign({daily:false, doneOn:null, rewardedOn:null, diff:"easy"}, td));
   return st;
 }
 function migrate(){
@@ -98,6 +128,34 @@ const unitOf     = q => q.target ? q.target.unit : "";
 const progressOf = (q,key) => q.log[key] || 0;
 const isDone     = (q,key) => progressOf(q,key) >= targetOf(q);
 
+/* ---- weekly frequency (any N of 7, Mon–Sun weeks) ---- */
+const freqOf = q => q.freq || 7;
+const mondayOf = d => { const x = new Date(d); x.setHours(0,0,0,0); return addDays(x, -((x.getDay()+6)%7)); };
+function weekHitsM(q, monday){        // done-days within that week
+  let n = 0;
+  for (let i = 0; i < 7; i++) if (isDone(q, fmt(addDays(monday, i)))) n++;
+  return n;
+}
+/* a freq<7 quest that already hit its weekly count is exempt from the daily gate */
+const weekSatisfied = (q, dateKey) =>
+  freqOf(q) < 7 && weekHitsM(q, mondayOf(parseD(dateKey))) >= freqOf(q);
+function weekStreakOf(q){             // consecutive weeks hitting the target; current week pending doesn't break it
+  const f = freqOf(q);
+  let mon = mondayOf(new Date()), streak = 0;
+  if (weekHitsM(q, mon) >= f) streak++;
+  mon = addDays(mon, -7);
+  const createdMon = mondayOf(parseD(q.createdAt));
+  while (mon >= createdMon && streak < 520){
+    if (weekHitsM(q, mon) >= f) { streak++; mon = addDays(mon, -7); }
+    else break;
+  }
+  return streak;
+}
+/* streak in the quest's own unit: days for daily quests, weeks for freq<7 */
+const questStreak = q => freqOf(q) < 7
+  ? { n: weekStreakOf(q), weekly: true }
+  : { n: streakOf(q), weekly: false };
+
 function streakOf(q){
   const created = parseD(q.createdAt);
   let d = new Date(); d.setHours(0,0,0,0);
@@ -114,10 +172,15 @@ function streakOf(q){
   }
   return streak;
 }
-const allDone = key => state.quests.length > 0 && state.quests.every(q => isDone(q,key));
+/* every quest is either done today or exempt via its met weekly goal */
+const allDone = key => state.quests.length > 0 && state.quests.every(q => isDone(q,key) || weekSatisfied(q,key));
 const totalCompletions = () =>
   state.quests.reduce((n,q) => n + Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length, 0);
-const maxStreak = () => state.quests.length ? Math.max(...state.quests.map(streakOf)) : 0;
+/* daily-streak titles measure daily (freq-7) quests only; week-streaks aren't comparable */
+const maxStreak = () => {
+  const daily = state.quests.filter(q => freqOf(q) >= 7);
+  return daily.length ? Math.max(...daily.map(streakOf)) : 0;
+};
 /* stat points are derived from completion logs — retro-consistent, nothing extra stored */
 function statPoints(){
   const pts = {str:0, agi:0, vit:0, int:0, wis:0};
@@ -126,6 +189,62 @@ function statPoints(){
     pts[s] += Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length;
   });
   return pts;
+}
+
+/* ---- quest mastery (derived from lifetime clears) ---- */
+const lifetimeClears = q => Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length;
+function masteryFromClears(n){
+  let m = MASTERY[0];
+  for (const x of MASTERY) if (n >= x[1]) m = x;
+  return { name:m[0], color:m[2], bonus:m[3] };
+}
+const masteryOf = q => masteryFromClears(lifetimeClears(q));
+
+/* ---- weekly gate raid (boss + runes, fully derived from logs) ---- */
+function raidInfo(monday){
+  const weekEndKey = fmt(addDays(monday, 6));
+  const qs = state.quests.filter(q => q.createdAt <= weekEndKey);
+  const expected = qs.reduce((n,q) => n + freqOf(q), 0);
+  if (!expected) return null;
+  const hp = Math.max(10, Math.round(expected * 10 * 0.8));   // kill ≈ 80% of expected clears
+  let clears = 0, perfectDays = 0;
+  for (let i = 0; i < 7; i++){
+    const key = fmt(addDays(monday, i));
+    let dayClears = 0, dayExpected = 0;
+    qs.forEach(q => { if (q.createdAt <= key){ dayExpected++; if (isDone(q, key)){ clears++; dayClears++; } } });
+    if (dayExpected > 0 && dayClears === dayExpected) perfectDays++;
+  }
+  const dmg = clears * 10 + perfectDays * 15;
+  const h = hashStr(fmt(monday));
+  return {
+    mondayKey: fmt(monday), boss: BOSSES[h % BOSSES.length], rune: RUNE_TYPES[h % RUNE_TYPES.length],
+    hp, dmg: Math.min(dmg, hp), rawDmg: dmg, killed: dmg >= hp, expected, clears
+  };
+}
+const currentRaid = () => raidInfo(mondayOf(new Date()));
+/* rune ownership = list of weeks whose boss died; pure derivation, retro-consistent */
+function runesEarned(){
+  if (!state.quests.length) return [];
+  const first = state.quests.reduce((m,q) => q.createdAt < m ? q.createdAt : m, todayStr());
+  let mon = mondayOf(parseD(first));
+  const thisMon = mondayOf(new Date());
+  const runes = [];
+  for (let i = 0; i < 520 && mon <= thisMon; i++, mon = addDays(mon, 7)){
+    const r = raidInfo(mon);
+    if (r && r.killed) runes.push(r);
+  }
+  return runes;
+}
+/* penalty: last week's boss escaped → runes sleep until 3 clears land this week */
+function runesDormant(){
+  const last = raidInfo(addDays(mondayOf(new Date()), -7));
+  if (!last || last.killed) return false;
+  const cur = currentRaid();
+  return !cur || cur.clears < 3;
+}
+/* each awake rune adds +1 EXP per quest clear, capped at +5 */
+function runeBonusXP(){
+  return runesDormant() ? 0 : Math.min(runesEarned().length, 5);
 }
 
 /* ================= player: levels, ranks, titles ================= */
@@ -157,6 +276,8 @@ const TITLES = [
   {id:"undying",  name:"Undying",              test:() => statPoints().vit >= 50},
   {id:"scholar",  name:"Arcane Scholar",       test:() => statPoints().int >= 50},
   {id:"oracle",   name:"Oracle of the Gate",   test:() => statPoints().wis >= 50},
+  {id:"gatebreak",  name:"Gatebreaker",        test:() => runesEarned().length >= 1},
+  {id:"raidmaster", name:"Raid Master",        test:() => runesEarned().length >= 10},
 ];
 const playerLevel = () => levelFromExp(state.player.exp).level;
 const titleName = id => { const t = TITLES.find(t => t.id === id); return t ? t.name : null; };
@@ -230,6 +351,8 @@ function setProgress(q, dateKey, value){
   const t = todayStr();
   const wasDone = isDone(q, dateKey);
   const wasAll = allDone(t);
+  const wasSatisfied = weekSatisfied(q, dateKey);
+  const raidBefore = currentRaid();
   value = Math.max(0, Math.min(value, targetOf(q)));
   if (value <= 0) delete q.log[dateKey]; else q.log[dateKey] = value;
   if (value > 0 && dateKey < q.createdAt) q.createdAt = dateKey;   // backfill extends history
@@ -238,15 +361,32 @@ function setProgress(q, dateKey, value){
   if (dateKey === t){   // XP only for today's gate — retro edits fix history, never EXP
     const led = (state.meta.xpLedger[t] = state.meta.xpLedger[t] || {});
     if (!wasDone && nowDone){
-      const s = streakOf(q), bonus = 2*Math.min(s, 15);
-      const xp = BASE_XP + bonus;
+      const st = questStreak(q);
+      const sBonus = 2*Math.min(st.n, 15);
+      const mastery = masteryOf(q);                 // includes this clear
+      const rBonus = runeBonusXP();                 // after-mutation: a reactivating clear counts itself
+      const xp = BASE_XP + sBonus + mastery.bonus + rBonus;
       led[q.id] = xp; grantXP(xp);
       sfx.complete();
-      toast(s > 1 ? `QUEST CLEAR — +${xp} EXP (🔥${s}d streak +${bonus})` : `QUEST CLEAR — +${xp} EXP`);
+      toast(st.n > 1
+        ? `QUEST CLEAR — +${xp} EXP (🔥${st.n}${st.weekly ? "w" : "d"} +${sBonus})`
+        : `QUEST CLEAR — +${xp} EXP`);
+      if (masteryFromClears(lifetimeClears(q) - 1).name !== mastery.name){
+        sfx.levelup();
+        setTimeout(() => toast(`QUEST RANK UP — ${q.name} reaches ${mastery.name}-RANK`), 1700);
+      }
+      if (!wasSatisfied && weekSatisfied(q, dateKey)){
+        sysAlert(`Weekly goal met — ${q.name} (${freqOf(q)}/${freqOf(q)}). Gate exempt for the rest of the week.`);
+      }
       if (!wasAll && allDone(t)){
         led._perfect = PERFECT_XP; grantXP(PERFECT_XP);
         particles();
         setTimeout(() => toast(`ALL GATES CLEARED — +${PERFECT_XP} BONUS EXP`), 900);
+      }
+      const raidNow = currentRaid();
+      if (raidNow && raidNow.killed && !(raidBefore && raidBefore.killed)){
+        sfx.levelup(); particles();
+        sysAlert(`GATE BOSS SLAIN — ${raidNow.boss} falls! ${raidNow.rune.name} acquired.`);
       }
     } else if (wasDone && !nowDone){
       if (led[q.id]){ revokeXP(led[q.id]); delete led[q.id]; }
@@ -272,8 +412,9 @@ function toggleTodo(td){
     // Untapping across midnight can't farm — yesterday's grant is never re-armed.
     const eligible = !led[key] && (td.daily ? td.rewardedOn !== t : !td.rewardedOn);
     if (eligible){
-      led[key] = SIDE_XP; grantXP(SIDE_XP); td.rewardedOn = t;
-      sfx.complete(); toast(`SIDE QUEST CLEAR — +${SIDE_XP} EXP`);
+      const xp = diffXP(td);
+      led[key] = xp; grantXP(xp); td.rewardedOn = t;
+      sfx.complete(); toast(`SIDE QUEST CLEAR — +${xp} EXP`);
     } else {
       sfx.tick();
     }
@@ -316,8 +457,10 @@ function renderHeader(){
   document.getElementById("questsDate").textContent =
     now.toLocaleDateString(undefined,{month:"short", day:"numeric"}).toUpperCase();
 
-  const total = state.quests.length;
-  const done = state.quests.filter(q => isDone(q,t)).length;
+  /* today's gate: quests done today plus quests still expected (weekly-satisfied ones are exempt) */
+  const active = state.quests.filter(q => isDone(q,t) || !weekSatisfied(q,t));
+  const total = active.length;
+  const done = active.filter(q => isDone(q,t)).length;
   const C = 2*Math.PI*32;
   document.getElementById("ringFg").style.strokeDashoffset = total ? C*(1 - done/total) : C;
   document.getElementById("ringCount").textContent = `${done}/${total}`;
@@ -346,13 +489,23 @@ function renderQuests(){
     const li = document.createElement("li");
     li.className = "quest panel sortable" + (done ? " done" : "");
     li.style.setProperty("--hc", q.color);
-    const s = streakOf(q);
-    const tier = s >= 30 ? " s3" : s >= 7 ? " s2" : "";   // flame heats up with the streak
+    const st = questStreak(q), s = st.n;
+    const tier = st.weekly
+      ? (s >= 12 ? " s3" : s >= 4 ? " s2" : "")
+      : (s >= 30 ? " s3" : s >= 7 ? " s2" : "");
+    const satisfied = weekSatisfied(q, t);
+    const weekBit = freqOf(q) < 7
+      ? (satisfied
+          ? ` &nbsp;<span class="clear-tag">◆ WEEK GOAL MET</span>`
+          : ` &nbsp;<span class="week-bit">${weekHitsM(q, mondayOf(new Date()))}/${freqOf(q)} wk</span>`)
+      : "";
+    const streakTxt = st.weekly ? `${s}w streak` : `${s} day${s>1?"s":""} streak`;
     const meta = done
-      ? `<span class="clear-tag">✔ CLEAR</span>${s>1?` &nbsp;<span class="streak-hot${tier}">🔥 ${s}d</span>`:""}`
-      : (s > 0 ? `<span class="streak-hot${tier}">🔥 ${s} day${s>1?"s":""} streak</span>` : `Begin your streak today`) +
+      ? `<span class="clear-tag">✔ CLEAR</span>${s>1?` &nbsp;<span class="streak-hot${tier}">🔥 ${s}${st.weekly?"w":"d"}</span>`:""}${weekBit}`
+      : (s > 0 ? `<span class="streak-hot${tier}">🔥 ${streakTxt}</span>` : `Begin your streak today`) + weekBit +
         (q.reminder ? ` &nbsp;<span class="rem-dot">⏰ ${q.reminder}</span>` : "");
-    const nameHTML = `${glyphOf(q)}${esc(q.name)}`;
+    const m = masteryOf(q);
+    const nameHTML = `${glyphOf(q)}${esc(q.name)}<span class="m-rank" style="color:${m.color}" title="Mastery — ${lifetimeClears(q)} lifetime clears">${m.name}</span>`;
     if (q.target){
       const amtOpen = openAmounts.has(q.id);
       li.innerHTML = `
@@ -404,6 +557,10 @@ const openAmounts = new Set();   // quest ids whose amount panel is expanded
 /* ================= side quests ================= */
 function renderTodos(){
   const list = document.getElementById("todoList");
+  const openCount = state.todos.filter(td => !td.done).length;
+  const sc = document.getElementById("sideCount");
+  sc.hidden = openCount === 0;
+  sc.textContent = openCount;
   if (!state.todos.length){
     list.innerHTML = `<li class="empty"><span class="big">🗡️</span>No side quests logged. The board is clear.</li>`;
     return;
@@ -412,13 +569,16 @@ function renderTodos(){
   state.todos.forEach(td => {
     const li = document.createElement("li");
     li.className = "todo panel sortable" + (td.done ? " done" : "");
+    const diffChip = td.diff && td.diff !== "easy"
+      ? `<span class="diff-tag ${td.diff}">+${diffXP(td)}</span>` : "";
     li.innerHTML = `
       <span class="drag-handle" aria-hidden="true">⠿</span>
       <button class="check" aria-label="Toggle task">${checkSVG}</button>
-      <div class="todo-text">${esc(td.text)}${td.daily ? `<span class="daily-tag">DAILY</span>` : ""}</div>
+      <div class="todo-text" role="button" title="Edit side quest">${esc(td.text)}${diffChip}${td.daily ? `<span class="daily-tag">DAILY</span>` : ""}</div>
       <button class="daily-btn${td.daily ? " on" : ""}" aria-label="Toggle daily repeat" title="${td.daily ? "Repeats daily — resets at midnight" : "Make this a daily side quest"}">⟳</button>
       <button class="del-btn" aria-label="Delete task">✕</button>`;
     li.querySelector(".check").onclick = () => toggleTodo(td);
+    li.querySelector(".todo-text").onclick = () => openTodoSheet(td);
     li.querySelector(".daily-btn").onclick = () => {
       td.daily = !td.daily;
       save(); renderTodos();
@@ -435,9 +595,120 @@ document.getElementById("todoForm").addEventListener("submit", e => {
   const input = document.getElementById("todoInput");
   const text = input.value.trim();
   if (!text) return;
-  state.todos.push({id:uid(), text, done:false, daily:false, doneOn:null, rewardedOn:null});
+  state.todos.push({id:uid(), text, done:false, daily:false, doneOn:null, rewardedOn:null, diff:"easy"});
   input.value = ""; save(); renderTodos();
 });
+
+/* ================= daily / side segments ================= */
+document.querySelectorAll(".seg-row .seg").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".seg-row .seg").forEach(b => b.classList.toggle("active", b === btn));
+    document.getElementById("seg-daily").hidden = btn.dataset.seg !== "daily";
+    document.getElementById("seg-side").hidden  = btn.dataset.seg !== "side";
+  };
+});
+
+/* ================= side quest editor ================= */
+const todoOverlay = document.getElementById("todoOverlay");
+let editingTodo = null, selDiff = "easy";
+function buildDiffRow(){
+  const row = document.getElementById("diffRow");
+  row.innerHTML = "";
+  [["easy","EASY"],["normal","NORMAL"],["hard","HARD"]].forEach(([id,label]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "diff-opt" + (selDiff === id ? " sel" : "");
+    b.innerHTML = `${label}<span>+${DIFF_XP[id]} EXP</span>`;
+    b.onclick = () => { selDiff = id; buildDiffRow(); };
+    row.appendChild(b);
+  });
+}
+function openTodoSheet(td){
+  editingTodo = td;
+  selDiff = DIFF_XP[td.diff] ? td.diff : "easy";
+  document.getElementById("todoTextInput").value = td.text;
+  document.getElementById("todoDailyChk").checked = !!td.daily;
+  buildDiffRow();
+  todoOverlay.classList.add("open");
+}
+function closeTodoSheet(){ todoOverlay.classList.remove("open"); editingTodo = null; }
+document.getElementById("todoSaveBtn").onclick = () => {
+  if (!editingTodo) return;
+  const text = document.getElementById("todoTextInput").value.trim();
+  if (text) editingTodo.text = text.slice(0, 200);
+  editingTodo.diff = selDiff;
+  editingTodo.daily = document.getElementById("todoDailyChk").checked;
+  save(); closeTodoSheet(); renderTodos();
+};
+document.getElementById("todoDeleteBtn").onclick = () => {
+  if (!editingTodo) return;
+  state.todos = state.todos.filter(x => x.id !== editingTodo.id);
+  save(); closeTodoSheet(); renderTodos();
+};
+todoOverlay.addEventListener("click", e => { if (e.target === todoOverlay) closeTodoSheet(); });
+
+/* ================= gate raid (weekly boss) ================= */
+const raidOverlay = document.getElementById("raidOverlay");
+function renderRaid(){
+  const panel = document.getElementById("raidPanel");
+  const raid = currentRaid();
+  if (!raid){ panel.hidden = true; return; }
+  panel.hidden = false;
+  const dayIdx = (new Date().getDay() + 6) % 7;              // 0 = Monday
+  const daysLeft = 7 - dayIdx;
+  const enraged = !raid.killed && dayIdx >= 3 && raid.rawDmg < raid.hp * (dayIdx / 7);
+  panel.classList.toggle("slain", raid.killed);
+  panel.classList.toggle("enraged", enraged);
+  panel.innerHTML = `
+    <div class="raid-top">
+      <span class="raid-tag">⬢ GATE RAID</span>
+      <span class="raid-days">${raid.killed ? "GATE CLEARED" : `${daysLeft}D LEFT`}${enraged ? ` · <b class="enrage-tag">ENRAGED</b>` : ""}</span>
+    </div>
+    <div class="raid-name">${raid.boss}</div>
+    <div class="hp-bar"><i style="width:${Math.round(100*raid.dmg/raid.hp)}%"></i></div>
+    <div class="raid-sub">${raid.killed
+      ? `SLAIN — ${raid.rune.name.toUpperCase()} SECURED`
+      : `${raid.dmg} / ${raid.hp} DMG${runesDormant() ? " · RUNES DORMANT" : ""}`}</div>`;
+  panel.onclick = openRaidSheet;
+}
+function openRaidSheet(){
+  const raid = currentRaid();
+  const det = document.getElementById("raidDetail");
+  det.innerHTML = raid ? `
+    <div class="raid-name">${raid.boss}</div>
+    <div class="hp-bar"><i style="width:${Math.round(100*raid.dmg/raid.hp)}%"></i></div>
+    <div class="raid-sub">${raid.dmg} / ${raid.hp} DMG · ${raid.clears} clear${raid.clears===1?"":"s"} this week${raid.killed ? " · SLAIN ✔" : ""}</div>`
+    : `<div class="empty">Register Daily Quests to open the weekly gate.</div>`;
+  const runes = runesEarned().slice().reverse();
+  const dormant = runesDormant();
+  const grid = document.getElementById("runeGrid");
+  grid.innerHTML = "";
+  if (!runes.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">No runes yet. Slay a weekly boss to claim your first.</div>`;
+  } else {
+    runes.slice(0, 24).forEach(r => {
+      const cell = document.createElement("div");
+      cell.className = "rune-cell" + (dormant ? " dormant" : "");
+      cell.style.color = STATS[r.rune.stat].color;
+      cell.title = `${r.rune.name} — week of ${r.mondayKey}`;
+      cell.innerHTML = `${STAT_ICONS[r.rune.stat]}<span>${r.rune.name.replace("Rune of ","")}</span>`;
+      grid.appendChild(cell);
+    });
+  }
+  const note = document.getElementById("runeStatus");
+  if (note) note.remove();
+  if (runes.length){
+    const n = document.createElement("div");
+    n.className = "sheet-note"; n.id = "runeStatus";
+    n.textContent = dormant
+      ? `Runes dormant — land ${Math.max(1, 3 - (raid ? raid.clears : 0))} more clear(s) this week to reawaken them.`
+      : `Active: +${runeBonusXP()} EXP per quest clear (${runes.length} rune${runes.length>1?"s":""}, cap +5).`;
+    grid.after(n);
+  }
+  raidOverlay.classList.add("open");
+}
+document.getElementById("raidClose").onclick = () => raidOverlay.classList.remove("open");
+raidOverlay.addEventListener("click", e => { if (e.target === raidOverlay) raidOverlay.classList.remove("open"); });
 
 /* ================= drag reorder (pointer events) ================= */
 function makeSortable(listEl, getArr){
@@ -458,12 +729,13 @@ function makeSortable(listEl, getArr){
   listEl.addEventListener("pointermove", e => {
     if (!drag) return;
     const dy = e.clientY - drag.y;
-    drag.row.style.transform = `translateY(${dy}px)`;
+    drag.row.style.transform = `translateY(${dy}px) scale(1.03) rotate(.8deg)`;   // lift
     const center = drag.mids[drag.start] + dy;
     let ni = 0;
     drag.mids.forEach((m,i) => { if (i !== drag.start && center > m) ni++; });
     if (ni !== drag.cur){
       drag.cur = ni;
+      try{ if (navigator.vibrate) navigator.vibrate(8); }catch(_){}   // slot-crossing tick
       drag.items.forEach((it,i) => {
         if (it === drag.row) return;
         let off = 0;
@@ -479,12 +751,27 @@ function makeSortable(listEl, getArr){
     const { row, items, start, cur } = drag;
     drag = null;
     row.classList.remove("dragging");
+    const before = row.getBoundingClientRect();   // visual spot at release
     items.forEach(it => { it.style.transform = ""; it.style.transition = ""; });
     if (cur !== start){
       const arr = getArr();
       const [m] = arr.splice(start, 1);
       arr.splice(cur, 0, m);
-      save(); renderAll();
+      save();
+      // move the DOM node directly — a full re-render would replay every row's entrance animation
+      listEl.insertBefore(row, cur > start ? items[cur].nextSibling : items[cur]);
+    }
+    // FLIP settle: glide from the release point into the final slot
+    const after = row.getBoundingClientRect();
+    const dy = before.top - after.top;
+    if (dy){
+      row.style.transition = "none";
+      row.style.transform = `translateY(${dy}px)`;
+      requestAnimationFrame(() => {
+        row.style.transition = "transform .18s ease";
+        row.style.transform = "";
+        setTimeout(() => { row.style.transition = ""; }, 220);
+      });
     }
   };
   listEl.addEventListener("pointerup", end);
@@ -530,10 +817,14 @@ function renderWeek(){
           </button>
         </div>`;
     }
+    const mw = masteryOf(q);
+    const pct = freqOf(q) < 7
+      ? (doneCount >= freqOf(q) ? `${doneCount}/${freqOf(q)} · GOAL MET ✓` : `${doneCount}/${freqOf(q)} THIS WEEK`)
+      : `${doneCount}/7 CLEARED`;
     card.innerHTML = `
       <div class="week-card-head">
-        <span class="quest-name">${glyphOf(q)}${esc(q.name)}</span>
-        <span class="week-pct">${doneCount}/7 CLEARED</span>
+        <span class="quest-name">${glyphOf(q)}${esc(q.name)}<span class="m-rank" style="color:${mw.color}">${mw.name}</span></span>
+        <span class="week-pct">${pct}</span>
       </div>
       <div class="week-days">${daysHTML}</div>`;
     card.querySelectorAll(".day-dot:not(.future)").forEach(btn => {
@@ -694,6 +985,7 @@ function openQuestSheet(quest){
   targetToggle.checked = !!tgt;
   targetFields.classList.toggle("hiddenblock", !tgt);
   document.getElementById("targetAmount").value = tgt ? tgt.amount : 30;
+  document.getElementById("freqSelect").value = quest ? freqOf(quest) : 7;
   const presets = ["min","hr","glasses","reps","pages"];
   if (tgt && !presets.includes(tgt.unit)){
     targetUnitSel.value = "custom";
@@ -727,12 +1019,13 @@ document.getElementById("saveQuestBtn").onclick = () => {
     target = { amount, unit };
   }
   const reminder = document.getElementById("reminderInput").value || null;
+  const freq = Math.min(7, Math.max(1, parseInt(document.getElementById("freqSelect").value, 10) || 7));
   const hadReminder = editing && editing.reminder;
   if (editing){
     editing.name = name; editing.stat = selStat; editing.color = selColor;
-    editing.target = target; editing.reminder = reminder;
+    editing.target = target; editing.reminder = reminder; editing.freq = freq;
   } else {
-    state.quests.push({id:uid(), name, stat:selStat, color:selColor, createdAt:todayStr(), target, reminder, log:{}});
+    state.quests.push({id:uid(), name, stat:selStat, color:selColor, createdAt:todayStr(), target, reminder, freq, log:{}});
   }
   if (reminder && !hadReminder && ("Notification" in window) && Notification.permission === "default"){
     try{ Notification.requestPermission(); }catch(_){}
@@ -890,7 +1183,7 @@ function systemTick(){
   const hm = pad(now.getHours()) + ":" + pad(now.getMinutes());
   let dirty = false;
   state.quests.forEach(q => {
-    if (q.reminder && hm >= q.reminder && !isDone(q,t) && state.meta.remindersFired[q.id] !== t){
+    if (q.reminder && hm >= q.reminder && !isDone(q,t) && !weekSatisfied(q,t) && state.meta.remindersFired[q.id] !== t){
       state.meta.remindersFired[q.id] = t; dirty = true;
       sysAlert(`Quest available: ${q.name}${q.target?` — ${targetOf(q)} ${unitOf(q)}`:""}`);
       sfx.complete();
@@ -899,7 +1192,7 @@ function systemTick(){
       }
     }
   });
-  if (now.getHours() >= 20 && state.quests.some(q => !isDone(q,t)) && state.meta.warnedOn !== t){
+  if (now.getHours() >= 20 && state.quests.some(q => !isDone(q,t) && !weekSatisfied(q,t)) && state.meta.warnedOn !== t){
     state.meta.warnedOn = t; dirty = true;
     warnBanner.classList.add("show");
     sfx.warn();
@@ -912,6 +1205,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) syst
 /* ================= boot ================= */
 function renderAll(){
   renderHeader();
+  renderRaid();
   renderQuests();
   renderTodos();
   renderWeek();
