@@ -183,7 +183,6 @@ function openSyncSheet(){
   syncOverlay.classList.add("open");
 }
 document.getElementById("syncBtn").onclick = openSyncSheet;
-document.getElementById("syncClose").onclick = () => syncOverlay.classList.remove("open");
 syncOverlay.addEventListener("click", e => { if (e.target === syncOverlay) syncOverlay.classList.remove("open"); });
 
 document.getElementById("syncConnectBtn").onclick = async () => {

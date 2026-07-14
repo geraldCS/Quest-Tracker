@@ -135,7 +135,9 @@
   /* ============ quest rows ============ */
   .quest,.todo{
     display:flex;align-items:center;gap:10px;padding:12px 12px;margin-bottom:9px;
-    animation:slideIn .3s cubic-bezier(.22,1,.36,1) both;position:relative;
+    /* fill-mode must NOT be 'both'/'forwards': a forward-filled `transform:none`
+       overrides the inline transforms the drag code writes (animations beat inline styles) */
+    animation:slideIn .3s cubic-bezier(.22,1,.36,1) backwards;position:relative;
   }
   @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .quest.dragging,.todo.dragging{
@@ -218,7 +220,7 @@
   .empty .big{font-size:1.8rem;display:block;margin-bottom:6px}
 
   /* ============ week view ============ */
-  .week-card{padding:14px;margin-bottom:12px;animation:slideIn .3s both}
+  .week-card{padding:14px;margin-bottom:12px;animation:slideIn .3s backwards}
   .week-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .week-card-head .quest-name{font-size:.92rem}
   .week-pct{font-size:.72rem;font-weight:700;color:var(--ink-soft);letter-spacing:.06em}
@@ -267,12 +269,35 @@
   .overlay.open{opacity:1;pointer-events:auto}
   .sheet{
     width:100%;max-width:640px;border-radius:14px 14px 0 0;
-    padding:22px 20px 34px;transform:translateY(30px) scaleY(.96);
+    padding:0;transform:translateY(30px) scaleY(.96);
     transition:transform .28s cubic-bezier(.22,1,.36,1);position:relative;
-    max-height:86vh;overflow-y:auto;
-    background:rgba(9,18,38,.92);border:1px solid var(--line);
+    max-height:86vh;display:flex;flex-direction:column;   /* frame never scrolls — brackets stay put */
+    background:rgba(8,15,32,.96);border:1px solid var(--line);
     box-shadow:0 0 30px var(--sys-glow), inset 0 0 40px rgba(74,168,255,.05);
     backdrop-filter:blur(12px);
+  }
+  .sheet-notch{width:44px;height:4px;border-radius:2px;background:rgba(74,168,255,.35);margin:10px auto 0;flex-shrink:0}
+  .sheet-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:15px 20px 13px;border-bottom:1px solid var(--line-dim);flex-shrink:0;
+  }
+  .sheet-head h3{margin:0}
+  .sheet-head h3::before{content:"⬢";margin-right:9px;font-size:.82em}
+  .sheet-x{
+    border:1px solid var(--line-dim);background:transparent;color:var(--ink-soft);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:.85rem;line-height:1;flex-shrink:0;
+    transition:transform .12s,border-color .15s,color .15s;
+  }
+  .sheet-x:hover{border-color:var(--sys);color:var(--ink)}
+  .sheet-x:active{transform:scale(.9)}
+  .sheet-body{
+    overflow-y:auto;padding:2px 20px 30px;overscroll-behavior:contain;
+    scrollbar-width:none;
+  }
+  .sheet-body::-webkit-scrollbar{display:none}
+  .sheet-body.can-scroll{
+    -webkit-mask-image:linear-gradient(#000 calc(100% - 26px), transparent);
+    mask-image:linear-gradient(#000 calc(100% - 26px), transparent);
   }
   @supports not (backdrop-filter: blur(12px)){ .sheet{background:#0a1428} }
   .overlay.open .sheet{transform:none;animation:materialize .3s}
@@ -286,7 +311,8 @@
   .sheet::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--sys);border-right:2px solid var(--sys)}
   @media(min-width:700px){
     .overlay{align-items:center}
-    .sheet{border-radius:14px;max-width:460px;padding-bottom:24px}
+    .sheet{border-radius:14px;max-width:460px}
+    .sheet-notch{display:none}
   }
   .sheet h3{
     font-family:var(--font-head);font-size:.85rem;font-weight:700;letter-spacing:.25em;
@@ -475,12 +501,55 @@
   @keyframes syncspin{to{transform:rotate(360deg)}}
   #syncBtn.err{color:var(--danger);border-color:rgba(255,59,78,.4)}
 
-  /* ============ themed scrollbar ============ */
-  .sheet{scrollbar-width:thin;scrollbar-color:rgba(74,168,255,.5) transparent}
-  .sheet::-webkit-scrollbar{width:6px}
-  .sheet::-webkit-scrollbar-track{background:transparent}
-  .sheet::-webkit-scrollbar-thumb{background:rgba(74,168,255,.45);border-radius:3px}
-  .sheet::-webkit-scrollbar-thumb:hover{background:var(--sys)}
+  /* ============ consistent press states ============ */
+  .danger-btn:active{transform:scale(.96)}
+  .icon-btn:active{transform:scale(.92)}
+
+  /* ============ settings hub ============ */
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .set-name{font-family:var(--font-head);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.95rem}
+  .set-note-inline{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+  .set-grid{display:flex;gap:10px}
+  .set-grid .pill-btn{flex:1;padding:12px 0}
+  .pill-btn.small{padding:8px 14px;font-size:.74rem}
+  .danger-btn.wide{width:100%}
+
+  /* ============ stat radar ============ */
+  .radar-toggle{
+    width:100%;margin-top:10px;background:transparent;border:0;cursor:pointer;
+    font-family:var(--font-head);font-size:.6rem;font-weight:700;letter-spacing:.28em;
+    color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:7px;padding:6px 0;
+  }
+  .radar-toggle:hover{color:var(--sys)}
+  .radar-wrap{display:none;justify-content:center}
+  .radar-wrap.open{display:flex;animation:slideIn .25s backwards}
+  .radar-wrap svg{width:min(250px,82%);height:auto}
+  .radar-ring{fill:none;stroke:var(--line-dim)}
+  .radar-axis{stroke:var(--line-dim)}
+  .radar-poly{
+    fill:rgba(74,168,255,.20);stroke:var(--sys);stroke-width:1.5;
+    filter:drop-shadow(0 0 6px var(--sys-glow));
+  }
+
+  /* ============ achievements gallery ============ */
+  .gal-sub{font-family:var(--font-head);font-size:.62rem;font-weight:700;letter-spacing:.22em;color:var(--ink-soft);margin:16px 0 10px}
+  .title-opt{position:relative}
+  .title-opt .t-name{display:block}
+  .title-opt .t-desc{display:block;font-size:.74rem;color:var(--ink-soft);margin-top:3px;letter-spacing:.03em}
+  .title-opt .t-worn{
+    position:absolute;top:10px;right:12px;
+    font-family:var(--font-head);font-size:.52rem;font-weight:700;letter-spacing:.16em;
+    color:var(--gold);border:1px solid rgba(245,197,66,.4);border-radius:4px;padding:1px 6px;
+  }
+
+  /* ============ year heatmap ============ */
+  .year-scroll{overflow-x:auto;padding:16px 14px}
+  .yg-labels{display:flex;gap:2px;margin-bottom:5px}
+  .yg-labels span{flex:0 0 8px;width:8px;font-family:var(--font-head);font-size:.48rem;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:visible;letter-spacing:.05em}
+  .yg-cols{display:flex;gap:2px}
+  .yg-col{display:flex;flex-direction:column;gap:2px}
+  .yg-cell{display:block;width:8px;height:8px;border-radius:2px;background:rgba(74,168,255,.05)}
+  .yg-cell.off{visibility:hidden}
 
   /* ============ daily / side segments ============ */
   .seg-row{display:flex;gap:6px;padding:5px;margin-top:16px}
@@ -582,6 +651,8 @@
   .quest.dragging,.todo.dragging{
     box-shadow:0 6px 30px rgba(0,0,0,.5), 0 0 26px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.12);
   }
+  /* belt-and-braces: no entrance animation may fight drag transforms */
+  .drag-live li.sortable{animation:none}
 
   @media (max-width:400px){
     .stat-cell b{font-size:.74rem}

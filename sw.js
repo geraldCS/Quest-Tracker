@@ -1,10 +1,13 @@
 /* ARISE service worker — cache-first app shell so the tracker works offline */
-const CACHE = "arise-v3";
+const CACHE = "arise-v4";
 const SHELL = [
   "./",
   "index.html",
   "style.css",
-  "app.js",
+  "core.js",
+  "engine.js",
+  "ui.js",
+  "boot.js",
   "sync.js",
   "manifest.json",
   "icons/icon.svg",

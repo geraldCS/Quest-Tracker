@@ -29,9 +29,7 @@
       <span class="date-line" id="dateLine"></span>
       <div class="top-btns">
         <button class="icon-btn" id="syncBtn" aria-label="Device sync settings" title="Device sync">○</button>
-        <button class="icon-btn" id="exportBtn" aria-label="Export save file" title="Export save file">⤓</button>
-        <button class="icon-btn" id="importBtn" aria-label="Import save file" title="Import save file">⤒</button>
-        <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
       </div>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
@@ -61,6 +59,10 @@
       </div>
     </div>
     <div class="stat-grid" id="statGrid"></div>
+    <button class="radar-toggle" id="radarToggle" aria-expanded="true">STAT RADAR <span class="chev">▾</span></button>
+    <div class="radar-wrap" id="radarWrap">
+      <svg id="radarSvg" viewBox="0 0 240 204" role="img" aria-label="Stat radar chart"></svg>
+    </div>
     <div class="head-sub" id="headSub"></div>
   </header>
 
@@ -99,16 +101,31 @@
     <section id="tab-week" hidden></section>
 
     <section id="tab-records" hidden>
-      <div class="month-nav">
-        <button id="prevMonth" aria-label="Previous month">‹</button>
-        <h3 id="monthTitle"></h3>
-        <button id="nextMonth" aria-label="Next month">›</button>
+      <div class="seg-row panel">
+        <button class="seg active" data-rview="month">MONTH</button>
+        <button class="seg" data-rview="year">YEAR</button>
       </div>
-      <div class="month-grid panel" id="monthGrid"></div>
-      <div class="legend">
-        Less <i style="background:rgba(74,168,255,.06)"></i><i style="background:#123a6b"></i><i style="background:#1e5fae"></i><i style="background:#8b5cf6"></i><i style="background:#f5c542"></i> More
+
+      <div id="recMonth">
+        <div class="month-nav">
+          <button id="prevMonth" aria-label="Previous month">‹</button>
+          <h3 id="monthTitle"></h3>
+          <button id="nextMonth" aria-label="Next month">›</button>
+        </div>
+        <div class="month-grid panel" id="monthGrid"></div>
+        <div class="legend">
+          Less <i style="background:rgba(74,168,255,.06)"></i><i style="background:#123a6b"></i><i style="background:#1e5fae"></i><i style="background:#8b5cf6"></i><i style="background:#f5c542"></i> More
+        </div>
+        <div class="records-hint">Tap any past day to edit its records — no EXP for past gates.</div>
       </div>
-      <div class="records-hint">Tap any past day to edit its records — no EXP for past gates.</div>
+
+      <div id="recYear" hidden>
+        <div class="year-scroll panel"><div id="yearGrid"></div></div>
+        <div class="legend">
+          Less <i style="background:rgba(74,168,255,.06)"></i><i style="background:#123a6b"></i><i style="background:#1e5fae"></i><i style="background:#8b5cf6"></i><i style="background:#f5c542"></i> More
+        </div>
+        <div class="records-hint">The last 12 months of gate clears. Use MONTH view to edit a day.</div>
+      </div>
     </section>
   </main>
 </div>
@@ -116,7 +133,12 @@
 <!-- quest add/edit -->
 <div class="overlay" id="questOverlay">
   <div class="sheet">
-    <h3 id="sheetTitle">NEW QUEST</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3 id="sheetTitle">NEW QUEST</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <label>Quest name</label>
     <input type="text" id="questNameInput" placeholder="e.g. Train body" maxlength="40" autocomplete="off">
     <label>Stat — which attribute does this quest train?</label>
@@ -171,34 +193,49 @@
       <button class="danger-btn" id="deleteQuestBtn" hidden>DELETE</button>
       <button class="pill-btn" id="saveQuestBtn">SAVE</button>
     </div>
+    </div>
   </div>
 </div>
 
 <!-- day editor -->
 <div class="overlay" id="dayOverlay">
   <div class="sheet">
-    <h3 id="dayTitle">GATE RECORDS</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3 id="dayTitle">GATE RECORDS</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <div id="dayRows"></div>
     <div class="sheet-note">Editing past records fixes history and streaks. No EXP is awarded for past gates.</div>
-    <div class="sheet-actions"><button class="pill-btn" id="dayClose">CLOSE</button></div>
+    </div>
   </div>
 </div>
 
 <!-- hunter name -->
 <div class="overlay" id="nameOverlay">
   <div class="sheet">
-    <h3>SYSTEM REGISTRATION</h3>
+    <div class="sheet-head">
+      <h3>SYSTEM REGISTRATION</h3>
+    </div>
+    <div class="sheet-body">
     <div class="sheet-note" style="margin-top:0">You have been recognized as a Player. State your name, Hunter.</div>
     <label>Hunter name</label>
     <input type="text" id="nameInput" placeholder="Sung Jin-Woo" maxlength="20" autocomplete="off">
     <div class="sheet-actions"><button class="pill-btn" id="nameSave">CONFIRM</button></div>
+    </div>
   </div>
 </div>
 
 <!-- side quest editor -->
 <div class="overlay" id="todoOverlay">
   <div class="sheet">
-    <h3>SIDE QUEST</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3>SIDE QUEST</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <label>Description</label>
     <textarea id="todoTextInput" maxlength="200" rows="3" placeholder="What needs doing, Hunter?"></textarea>
     <label>Difficulty</label>
@@ -211,13 +248,57 @@
       <button class="danger-btn" id="todoDeleteBtn">DELETE</button>
       <button class="pill-btn" id="todoSaveBtn">SAVE</button>
     </div>
+    </div>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3>SETTINGS</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <label>Hunter</label>
+      <div class="set-row">
+        <span class="set-name" id="setName">HUNTER</span>
+        <button class="pill-btn small" id="setRename">RENAME</button>
+      </div>
+      <label>Sound</label>
+      <div class="set-row">
+        <span class="set-note-inline">Completion &amp; alert effects</span>
+        <button class="icon-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
+      </div>
+      <label>Data</label>
+      <div class="set-grid">
+        <button class="pill-btn" id="exportBtn">⤓ EXPORT SAVE</button>
+        <button class="pill-btn" id="importBtn">⤒ IMPORT SAVE</button>
+      </div>
+      <div class="sheet-note">Backups download as JSON. Importing replaces this device's data.</div>
+      <label>Device sync</label>
+      <div class="set-row">
+        <span class="set-note-inline" id="setSyncStatus">Not connected</span>
+        <button class="pill-btn small" id="setOpenSync">OPEN SYNC</button>
+      </div>
+      <label>Danger zone</label>
+      <button class="danger-btn wide" id="resetBtn">RESET ALL DATA</button>
+      <div class="sheet-note">Wipes this device's save. If sync is connected, your data returns from the gist on the next pull — disconnect sync first for a true wipe.</div>
+      <div class="sheet-note" style="text-align:center;margin-top:18px">ARISE · build arise-v4</div>
+    </div>
   </div>
 </div>
 
 <!-- device sync -->
 <div class="overlay" id="syncOverlay">
   <div class="sheet">
-    <h3>DEVICE SYNC</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3>DEVICE SYNC</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <div class="sheet-note" style="margin-top:0" id="syncInfo"></div>
     <label>GitHub token</label>
     <input type="password" id="syncTokenInput" placeholder="github_pat_…" autocomplete="off">
@@ -226,28 +307,38 @@
       <button class="danger-btn" id="syncDisconnectBtn" hidden>DISCONNECT</button>
       <button class="pill-btn" id="syncConnectBtn">CONNECT</button>
     </div>
-    <div class="sheet-actions"><button class="pill-btn" id="syncClose">CLOSE</button></div>
+    </div>
   </div>
 </div>
 
 <!-- gate raid / boss sheet -->
 <div class="overlay" id="raidOverlay">
   <div class="sheet">
-    <h3>GATE RAID</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3>GATE RAID</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <div id="raidDetail"></div>
     <label>Rune Collection</label>
     <div class="rune-grid" id="runeGrid"></div>
     <div class="sheet-note">Each quest clear deals 10 DMG; a perfect day crits for +15. Slay the boss by Sunday to claim its rune — each awake rune adds +1 EXP per clear (max +5). If a boss escapes, your runes sleep until you land 3 clears the following week.</div>
-    <div class="sheet-actions"><button class="pill-btn" id="raidClose">CLOSE</button></div>
+    </div>
   </div>
 </div>
 
 <!-- title picker -->
 <div class="overlay" id="titleOverlay">
   <div class="sheet">
-    <h3>TITLES</h3>
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3 id="galleryTitle">ACHIEVEMENTS</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
     <div id="titleOpts"></div>
-    <div class="sheet-actions"><button class="pill-btn" id="titleClose">CLOSE</button></div>
+    </div>
   </div>
 </div>
 
@@ -260,7 +351,10 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="app.js"></script>
+<script src="core.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+<script src="boot.js"></script>
 <script src="sync.js"></script>
 </body>
 </html>
