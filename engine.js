@@ -21,7 +21,6 @@ const sfx = (() => {
     o.connect(g); g.connect(master);
     o.start(t0); o.stop(t0 + dur + .05);
   }
-  const buzz = ms => { try{ if (navigator.vibrate) navigator.vibrate(ms); }catch(_){} };
   return {
     tick:     () => blip(880, "triangle", .05, 0, .06),
     complete: () => { buzz(15); blip(987, "sine", .09, 0, .12); blip(1319, "sine", .2, .09, .12); blip(1325, "sine", .2, .09, .05); },
@@ -73,6 +72,7 @@ function setProgress(q, dateKey, value){
         sysAlert(`GATE BOSS SLAIN — ${raidNow.boss} falls! ${raidNow.rune.name} acquired.`);
       }
     } else if (wasDone && !nowDone){
+      buzz(8);
       if (led[q.id]){ revokeXP(led[q.id]); delete led[q.id]; }
       if (led._perfect && !allDone(t)){ revokeXP(led._perfect); delete led._perfect; }
     } else if (value > 0){
@@ -103,6 +103,7 @@ function toggleTodo(td){
       sfx.tick();
     }
   } else {
+    buzz(8);
     const doneToday = td.doneOn === t;
     td.done = false; td.doneOn = null;
     // refund only same-day completions — retro edits never change EXP

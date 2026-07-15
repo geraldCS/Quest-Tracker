@@ -505,6 +505,11 @@
   .danger-btn:active{transform:scale(.96)}
   .icon-btn:active{transform:scale(.92)}
 
+  /* ============ tab / segment cross-fade ============ */
+  /* backwards fill only — forward fills override inline transforms (the round-5 drag lesson) */
+  main section,#seg-daily,#seg-side,#recMonth,#recYear{animation:tabIn .22s ease backwards}
+  @keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
   /* ============ settings hub ============ */
   .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .set-name{font-family:var(--font-head);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.95rem}
@@ -665,5 +670,5 @@
     .lvl-word{animation:none}
     .warn-banner{animation:none}
     .overlay.open .sheet{animation:none}
-    *{transition-duration:.01s !important}
+    *{transition-duration:.01s !important;animation-duration:.01s !important}
   }
