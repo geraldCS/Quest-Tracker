@@ -62,6 +62,8 @@ const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); retu
 const todayStr = () => fmt(new Date());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)");
+const buzz = ms => { try{ if (!REDUCED_MOTION.matches && navigator.vibrate) navigator.vibrate(ms); }catch(_){} };
 
 /* ================= state & migration ================= */
 function baseState(){

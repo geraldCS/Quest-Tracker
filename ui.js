@@ -207,9 +207,10 @@ document.getElementById("todoForm").addEventListener("submit", e => {
 });
 
 /* ================= daily / side segments ================= */
-document.querySelectorAll(".seg-row .seg").forEach(btn => {
+document.querySelectorAll(".seg-row .seg[data-seg]").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".seg-row .seg").forEach(b => b.classList.toggle("active", b === btn));
+    buzz(6);
+    document.querySelectorAll(".seg-row .seg[data-seg]").forEach(b => b.classList.toggle("active", b === btn));
     document.getElementById("seg-daily").hidden = btn.dataset.seg !== "daily";
     document.getElementById("seg-side").hidden  = btn.dataset.seg !== "side";
   };
@@ -319,7 +320,7 @@ raidOverlay.addEventListener("click", e => { if (e.target === raidOverlay) raidO
 
 /* ================= drag reorder (pointer events) ================= */
 function makeSortable(listEl, getArr){
-  let drag = null;
+  let drag = null, scrollVel = 0, scrollLoop = null;
   listEl.addEventListener("pointerdown", e => {
     const handle = e.target.closest(".drag-handle");
     if (!handle || !e.isPrimary) return;
@@ -327,23 +328,25 @@ function makeSortable(listEl, getArr){
     if (!row) return;
     e.preventDefault();
     const items = [...listEl.querySelectorAll("li.sortable")];
-    const mids = items.map(it => { const r = it.getBoundingClientRect(); return r.top + r.height/2; });
+    // page coordinates, so auto-scrolling mid-drag keeps the math consistent
+    const mids = items.map(it => { const r = it.getBoundingClientRect(); return r.top + r.height/2 + scrollY; });
     drag = { row, items, mids, start: items.indexOf(row), cur: items.indexOf(row),
-             y: e.clientY, h: row.getBoundingClientRect().height + 9 };
+             pageY0: e.clientY + scrollY, lastClientY: e.clientY,
+             h: row.getBoundingClientRect().height + 9 };
     listEl.classList.add("drag-live");   // kill entrance animations so inline transforms always win
     row.classList.add("dragging");
     try{ handle.setPointerCapture(e.pointerId); }catch(_){}
   });
-  listEl.addEventListener("pointermove", e => {
+  function updateDrag(){
     if (!drag) return;
-    const dy = e.clientY - drag.y;
+    const dy = (drag.lastClientY + scrollY) - drag.pageY0;
     drag.row.style.transform = `translateY(${dy}px) scale(1.03) rotate(.8deg)`;   // lift
     const center = drag.mids[drag.start] + dy;
     let ni = 0;
     drag.mids.forEach((m,i) => { if (i !== drag.start && center > m) ni++; });
     if (ni !== drag.cur){
       drag.cur = ni;
-      try{ if (navigator.vibrate) navigator.vibrate(8); }catch(_){}   // slot-crossing tick
+      buzz(8);   // slot-crossing tick
       drag.items.forEach((it,i) => {
         if (it === drag.row) return;
         let off = 0;
@@ -353,8 +356,30 @@ function makeSortable(listEl, getArr){
         it.style.transform = off ? `translateY(${off}px)` : "";
       });
     }
+  }
+  let lastTick = 0;
+  function autoScrollTick(){
+    if (!drag || !scrollVel){ clearInterval(scrollLoop); scrollLoop = null; return; }
+    const now = performance.now();
+    const dt = lastTick ? Math.min(now - lastTick, 120) : 16;   // time-scaled: speed survives timer throttling
+    lastTick = now;
+    scrollBy(0, scrollVel * dt / 16);
+    updateDrag();
+  }
+  listEl.addEventListener("pointermove", e => {
+    if (!drag) return;
+    drag.lastClientY = e.clientY;
+    const EDGE = 80;   // auto-scroll when the pointer nears the viewport edge
+    scrollVel = e.clientY < EDGE ? -Math.ceil((EDGE - e.clientY) / 7)
+              : e.clientY > innerHeight - EDGE ? Math.ceil((e.clientY - (innerHeight - EDGE)) / 7)
+              : 0;
+    // setInterval, not rAF — rAF can be throttled to a standstill (the FLIP-settle lesson)
+    if (scrollVel && !scrollLoop){ lastTick = 0; scrollLoop = setInterval(autoScrollTick, 16); }
+    updateDrag();
   });
   const end = () => {
+    scrollVel = 0;
+    if (scrollLoop){ clearInterval(scrollLoop); scrollLoop = null; }
     if (!drag) return;
     const { row, items, start, cur } = drag;
     drag = null;
@@ -496,7 +521,7 @@ function applyRecView(){
   document.getElementById("recYear").hidden = recView !== "year";
 }
 document.querySelectorAll("#tab-records .seg").forEach(b => {
-  b.onclick = () => { recView = b.dataset.rview; localStorage.setItem("arise-records-view", recView); applyRecView(); };
+  b.onclick = () => { buzz(6); recView = b.dataset.rview; localStorage.setItem("arise-records-view", recView); applyRecView(); };
 });
 applyRecView();
 
@@ -580,6 +605,7 @@ dayOverlay.addEventListener("click", e => { if (e.target === dayOverlay){ dayOve
 /* ================= tabs ================= */
 document.querySelectorAll(".tabs button").forEach(btn => {
   btn.onclick = () => {
+    buzz(6);
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
     ["quests","week","records"].forEach(name => {
       document.getElementById("tab-"+name).hidden = name !== btn.dataset.tab;
@@ -767,6 +793,20 @@ document.addEventListener("keydown", e => {
   const open = [...document.querySelectorAll(".overlay.open")].pop();
   if (open && open.id !== "nameOverlay") closeOverlay(open);   // registration can't be dismissed
 });
+/* focus trap: Tab cycles inside the open sheet */
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+document.addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const open = [...document.querySelectorAll(".overlay.open")].pop();
+  if (!open) return;
+  const els = [...open.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+  if (!els.length) return;
+  const first = els[0], last = els[els.length - 1];
+  const active = document.activeElement;
+  if (!open.contains(active)){ e.preventDefault(); first.focus(); return; }
+  if (!e.shiftKey && active === last){ e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && active === first){ e.preventDefault(); last.focus(); }
+});
 function updateSheetFade(ov){
   const body = ov.querySelector(".sheet-body");
   if (!body) return;
@@ -779,9 +819,16 @@ const overlayObserver = new MutationObserver(muts => {
     const isOpen = ov.classList.contains("open");
     const wasOpen = (m.oldValue || "").split(" ").includes("open");
     if (isOpen && !wasOpen){
+      buzz(6);
       sheetFocusMemo.set(ov, document.activeElement);
       updateSheetFade(ov);
-      setTimeout(() => updateSheetFade(ov), 320);   // re-check after the materialize animation
+      setTimeout(() => {
+        updateSheetFade(ov);   // re-check after the materialize animation
+        if (ov.classList.contains("open") && !ov.contains(document.activeElement)){
+          const f = ov.querySelector(FOCUSABLE);   // move focus into the sheet unless it claimed its own
+          if (f) try{ f.focus({preventScroll:true}); }catch(_){}
+        }
+      }, 320);
     } else if (!isOpen && wasOpen){
       const el = sheetFocusMemo.get(ov);
       sheetFocusMemo.delete(ov);
