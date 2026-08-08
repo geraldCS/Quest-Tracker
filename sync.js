@@ -123,6 +123,7 @@ async function syncPull(){
     const mergedJSON = JSON.stringify(merged);
     if (mergedJSON !== localJSON){
       state = normalize(merged);
+      touchState();                                // the merge writes q.log day-by-day
       save();                                      // wrapped: persists + queues a push-back
       renderAll();
     } else if (mergedJSON !== remoteJSON){
