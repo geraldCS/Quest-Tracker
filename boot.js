@@ -5,6 +5,19 @@ const warnBanner = document.getElementById("warnBanner");
 document.getElementById("warnClose").onclick = () => warnBanner.classList.remove("show");
 let lastDay = todayStr();
 
+/* Data-safety nudge: one gentle alert per session, never a nag. The sync token is
+   read straight from localStorage because sync.js loads after this file — calling
+   syncToken() here would throw on first load. */
+let nudged = false;
+function backupNudge(){
+  if (nudged) return;
+  if (localStorage.getItem("arise-sync-token")) return;   // synced: the gist is the backup
+  if (state.meta.lastExport) return;                      // a save file already exists
+  if (totalCompletions() < 20) return;                    // too early to be worth losing
+  nudged = true;
+  sysAlert("Your record lives only on this device. Export a save file or connect device sync — ⚙ Settings → Data.");
+}
+
 function systemTick(){
   const t = todayStr();
   if (t !== lastDay){   // midnight rollover
@@ -36,6 +49,7 @@ function systemTick(){
     sfx.warn();
   }
   if (dirty) save();
+  backupNudge();
 }
 setInterval(systemTick, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) systemTick(); });
@@ -54,7 +68,8 @@ function renderAll(){
 checkTitles(true);       // unlock silently for migrated history — no toast spam on load
 save();
 renderAll();
-if (!state.player.name) openNameSheet();
+if (!state.player.onboarded) openOnboarding();
+else if (!state.player.name) openNameSheet();
 systemTick();
 
 /* ================= PWA (no-op on file:// and on localhost dev) ================= */

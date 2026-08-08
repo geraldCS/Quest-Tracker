@@ -226,6 +226,44 @@
   </div>
 </div>
 
+<!-- first-run onboarding -->
+<div class="overlay" id="onboardOverlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="obTitle">SYSTEM AWAKENING</h3>
+    </div>
+    <div class="sheet-body">
+      <div class="ob-dots" id="obDots" aria-hidden="true"></div>
+
+      <div class="ob-step" data-step="1">
+        <div class="sheet-note" style="margin-top:0">You have been recognized as a Player. The System will record your growth from this day. State your name, Hunter.</div>
+        <label>Hunter name</label>
+        <input type="text" id="obNameInput" placeholder="Sung Jin-Woo" maxlength="20" autocomplete="off">
+      </div>
+
+      <div class="ob-step" data-step="2" hidden>
+        <div class="sheet-note" style="margin-top:0">Three starter quests are already registered. Clear one today to earn your first title — or begin with an empty board.</div>
+        <ul class="ob-quests" id="obQuests"></ul>
+      </div>
+
+      <div class="ob-step" data-step="3" hidden>
+        <div class="sheet-note" style="margin-top:0">Four things worth knowing.</div>
+        <ul class="ob-rules">
+          <li><b>One tap clears a quest.</b> The ± button is only for logging a partial amount.</li>
+          <li><b>Stats grow from clears.</b> STR, AGI, VIT, INT and WIS are read from your log, never awarded by hand.</li>
+          <li><b>A gate boss appears each week.</b> Clear enough quests to bring it down and claim its rune.</li>
+          <li><b>Retro edits fix history, never EXP.</b> Fill in a missed day freely — the ledger stays honest.</li>
+        </ul>
+      </div>
+
+      <div class="sheet-actions ob-actions">
+        <button class="danger-btn" id="obSecondary">START EMPTY</button>
+        <button class="pill-btn" id="obNext">CONTINUE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- side quest editor -->
 <div class="overlay" id="todoOverlay">
   <div class="sheet">
@@ -274,6 +312,9 @@
       <div class="set-grid">
         <button class="pill-btn" id="exportBtn">⤓ EXPORT SAVE</button>
         <button class="pill-btn" id="importBtn">⤒ IMPORT SAVE</button>
+      </div>
+      <div class="set-row">
+        <span class="set-note-inline" id="setBackupAge">Never exported</span>
       </div>
       <div class="sheet-note">Backups download as JSON. Importing replaces this device's data.</div>
       <label>Device sync</label>

@@ -98,9 +98,9 @@ function memo(key, fn){
 function baseState(){
   return {
     version: 2,
-    player: { name:null, exp:0, title:null, titles:[], muted:false, seenLevel:1, radarOpen:true },
+    player: { name:null, exp:0, title:null, titles:[], muted:false, seenLevel:1, radarOpen:true, onboarded:false },
     quests: [], todos: [],
-    meta: { xpLedger:{}, remindersFired:{}, warnedOn:null, deleted:{} }
+    meta: { xpLedger:{}, remindersFired:{}, warnedOn:null, deleted:{}, lastExport:null }
   };
 }
 function defaultState(){
@@ -116,8 +116,12 @@ function defaultState(){
 function normalize(st){
   const base = baseState();
   st.version = 2;
+  // a save written before onboarding existed has no flag — infer it from the name,
+  // so returning players are never shown the first-run flow
+  const hadOnboarded = !!(st.player && "onboarded" in st.player);
   st.player = Object.assign(base.player, st.player || {});
   st.meta   = Object.assign(base.meta,   st.meta   || {});
+  if (!hadOnboarded) st.player.onboarded = !!st.player.name;
   st.quests = (st.quests || []).map(q => {
     if (!STATS[q.stat]) q.stat = EMOJI_STAT[q.emoji] || "str";
     if (q.target && "step" in q.target) delete q.target.step;

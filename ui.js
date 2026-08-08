@@ -766,6 +766,55 @@ document.getElementById("nameInput").addEventListener("keydown", e => {
 });
 document.getElementById("editNameBtn").onclick = openNameSheet;
 
+/* ================= first-run onboarding ================= */
+const onboardOverlay = document.getElementById("onboardOverlay");
+let obStep = 1, obKeepStarters = true;
+function renderObQuests(){
+  document.getElementById("obQuests").innerHTML = state.quests.map(q =>
+    `<li>${glyphOf(q)}<b>${esc(q.name)}</b><span class="ob-q-meta">${
+      q.target ? esc(targetOf(q) + " " + unitOf(q)) : "one tap"} · ${STATS[q.stat].ab}</span></li>`).join("");
+}
+function renderOnboard(){
+  document.querySelectorAll("#onboardOverlay .ob-step").forEach(el => { el.hidden = +el.dataset.step !== obStep; });
+  document.getElementById("obDots").innerHTML =
+    [1,2,3].map(n => `<span class="ob-dot${n === obStep ? " on" : ""}"></span>`).join("");
+  document.getElementById("obTitle").textContent =
+    obStep === 1 ? "SYSTEM AWAKENING" : obStep === 2 ? "STARTER QUESTS" : "THE RULES";
+  document.getElementById("obSecondary").style.display = obStep === 2 ? "" : "none";
+  document.getElementById("obNext").textContent =
+    obStep === 1 ? "CONTINUE" : obStep === 2 ? "KEEP THESE" : "BEGIN";
+  if (obStep === 2) renderObQuests();
+  if (obStep === 1) setTimeout(() => document.getElementById("obNameInput").focus(), 250);
+}
+function openOnboarding(){
+  obStep = 1; obKeepStarters = true;
+  document.getElementById("obNameInput").value = state.player.name || "";
+  renderOnboard();
+  onboardOverlay.classList.add("open");
+}
+function finishOnboarding(){
+  state.player.name = document.getElementById("obNameInput").value.trim() || "Hunter";
+  state.player.onboarded = true;
+  if (!obKeepStarters){
+    state.quests.forEach(q => { state.meta.deleted[q.id] = todayStr(); });   // tombstone so sync agrees
+    state.quests = [];
+    touchState();
+  }
+  save();
+  onboardOverlay.classList.remove("open");
+  renderAll();
+  toast(`REGISTERED — Welcome, ${state.player.name}.`);
+}
+document.getElementById("obNext").onclick = () => {
+  if (obStep < 3){ obStep++; buzz(6); renderOnboard(); } else finishOnboarding();
+};
+document.getElementById("obSecondary").onclick = () => {
+  obKeepStarters = false; obStep = 3; buzz(6); renderOnboard();
+};
+document.getElementById("obNameInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("obNext").click();
+});
+
 /* ================= title picker ================= */
 const titleOverlay = document.getElementById("titleOverlay");
 function openGallery(){
@@ -821,7 +870,7 @@ document.addEventListener("click", e => {
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   const open = [...document.querySelectorAll(".overlay.open")].pop();
-  if (open && open.id !== "nameOverlay") closeOverlay(open);   // registration can't be dismissed
+  if (open && open.id !== "nameOverlay" && open.id !== "onboardOverlay") closeOverlay(open);   // registration can't be dismissed
 });
 /* focus trap: Tab cycles inside the open sheet */
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -880,10 +929,18 @@ document.getElementById("muteBtn").onclick = () => {
 
 /* ================= settings hub ================= */
 const settingsOverlay = document.getElementById("settingsOverlay");
+function backupAgeText(){
+  if (!state.meta.lastExport) return "Never exported — no save file on this device";
+  const days = Math.round((new Date() - parseD(state.meta.lastExport)) / 864e5);
+  return days <= 0 ? "Last backup — today"
+       : days === 1 ? "Last backup — yesterday"
+       : `Last backup — ${days} days ago`;
+}
 function openSettings(){
   document.getElementById("setName").textContent = state.player.name || "HUNTER";
   document.getElementById("setSyncStatus").textContent =
     localStorage.getItem("arise-sync-token") ? "Connected — gist backup active" : "Not connected";
+  document.getElementById("setBackupAge").textContent = backupAgeText();
   settingsOverlay.classList.add("open");
 }
 document.getElementById("settingsBtn").onclick = openSettings;
@@ -905,6 +962,9 @@ document.getElementById("exportBtn").onclick = () => {
   a.download = `hunter-save-${todayStr()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
+  state.meta.lastExport = todayStr();
+  save();
+  document.getElementById("setBackupAge").textContent = backupAgeText();
   toast("SAVE FILE EXPORTED");
 };
 const importFile = document.getElementById("importFile");
@@ -918,6 +978,12 @@ importFile.onchange = () => {
     try{
       const data = JSON.parse(r.result);
       if (!data || data.version !== 2 || !Array.isArray(data.quests)) throw new Error("bad shape");
+      // a malformed log takes down every derived scanner at once — reject it at the door
+      const plainObj = o => !!o && typeof o === "object" && !Array.isArray(o);
+      const okQuest = q => plainObj(q) && typeof q.id === "string" && typeof q.createdAt === "string" && plainObj(q.log);
+      if (!data.quests.every(okQuest)) throw new Error("bad quest");
+      if (data.todos != null && (!Array.isArray(data.todos) || !data.todos.every(t => plainObj(t) && typeof t.id === "string")))
+        throw new Error("bad side quest");
       if (!confirm("Import this save file? Your current data will be replaced.")) return;
       state = normalize(data);
       touchState();
