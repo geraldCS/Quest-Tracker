@@ -14,6 +14,7 @@ function systemTick(){
       if (td.daily && td.done){ td.done = false; td.doneOn = null; rolled = true; }
     });
     if (rolled) save();
+    touchState();   // memo() guards the day itself; this keeps "every mutation touches" exception-free
     renderAll();
   }
   const now = new Date();

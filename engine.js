@@ -39,6 +39,7 @@ function setProgress(q, dateKey, value){
   value = Math.max(0, Math.min(value, targetOf(q)));
   if (value <= 0) delete q.log[dateKey]; else q.log[dateKey] = value;
   if (value > 0 && dateKey < q.createdAt) q.createdAt = dateKey;   // backfill extends history
+  touchState();   // must land here: the XP block below re-reads currentRaid() to detect a kill
   const nowDone = isDone(q, dateKey);
 
   if (dateKey === t){   // XP only for today's gate — retro edits fix history, never EXP

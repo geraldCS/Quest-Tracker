@@ -65,6 +65,35 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">"
 const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)");
 const buzz = ms => { try{ if (!REDUCED_MOTION.matches && navigator.vibrate) navigator.vibrate(ms); }catch(_){} };
 
+/* ================= derived-value memo =================
+   Stats, mastery, raids and runes are all derived by scanning quest logs, and a
+   full render asks for them ~40 times. One invalidation point covers the lot:
+   touchState(), called at every write to a log or to the quest set.
+
+   Invalidate at the MUTATION, never at the render boundary — setProgress reads
+   currentRaid() before the log write and again after it to detect a boss kill.
+   A per-render cache would hand back the stale "before" value and the kill would
+   never register.
+
+   touchState() clears rather than tags entries, so the map can't grow without
+   bound and the before/after pair is correct by construction: the first call
+   caches, the clear drops it, the second recomputes.
+
+   The current day is a guard too — currentRaid()/streakOf() read `new Date()`,
+   so a midnight rollover has to invalidate even when nothing was written. */
+let _srev = 0;                     // revision counter; the verification suite asserts on it
+const _memo = new Map();
+let _memoDay = todayStr();
+function touchState(){ _srev++; _memo.clear(); }
+function memo(key, fn){
+  const d = todayStr();
+  if (d !== _memoDay){ _memoDay = d; _memo.clear(); }
+  if (_memo.has(key)) return _memo.get(key);   // has(), not truthiness — raidInfo caches null
+  const v = fn();
+  _memo.set(key, v);
+  return v;
+}
+
 /* ================= state & migration ================= */
 function baseState(){
   return {
@@ -135,24 +164,28 @@ const isDone     = (q,key) => progressOf(q,key) >= targetOf(q);
 const freqOf = q => q.freq || 7;
 const mondayOf = d => { const x = new Date(d); x.setHours(0,0,0,0); return addDays(x, -((x.getDay()+6)%7)); };
 function weekHitsM(q, monday){        // done-days within that week
-  let n = 0;
-  for (let i = 0; i < 7; i++) if (isDone(q, fmt(addDays(monday, i)))) n++;
-  return n;
+  return memo("wh:" + q.id + ":" + fmt(monday), () => {
+    let n = 0;
+    for (let i = 0; i < 7; i++) if (isDone(q, fmt(addDays(monday, i)))) n++;
+    return n;
+  });
 }
 /* a freq<7 quest that already hit its weekly count is exempt from the daily gate */
 const weekSatisfied = (q, dateKey) =>
   freqOf(q) < 7 && weekHitsM(q, mondayOf(parseD(dateKey))) >= freqOf(q);
 function weekStreakOf(q){             // consecutive weeks hitting the target; current week pending doesn't break it
-  const f = freqOf(q);
-  let mon = mondayOf(new Date()), streak = 0;
-  if (weekHitsM(q, mon) >= f) streak++;
-  mon = addDays(mon, -7);
-  const createdMon = mondayOf(parseD(q.createdAt));
-  while (mon >= createdMon && streak < 520){
-    if (weekHitsM(q, mon) >= f) { streak++; mon = addDays(mon, -7); }
-    else break;
-  }
-  return streak;
+  return memo("ws:" + q.id, () => {
+    const f = freqOf(q);
+    let mon = mondayOf(new Date()), streak = 0;
+    if (weekHitsM(q, mon) >= f) streak++;
+    mon = addDays(mon, -7);
+    const createdMon = mondayOf(parseD(q.createdAt));
+    while (mon >= createdMon && streak < 520){
+      if (weekHitsM(q, mon) >= f) { streak++; mon = addDays(mon, -7); }
+      else break;
+    }
+    return streak;
+  });
 }
 /* streak in the quest's own unit: days for daily quests, weeks for freq<7 */
 const questStreak = q => freqOf(q) < 7
@@ -160,42 +193,47 @@ const questStreak = q => freqOf(q) < 7
   : { n: streakOf(q), weekly: false };
 
 function streakOf(q){
-  const created = parseD(q.createdAt);
-  let d = new Date(); d.setHours(0,0,0,0);
-  if (!isDone(q, fmt(d))) d = addDays(d,-1);      // today pending doesn't break it
-  let streak = 0, lastGrace = null;
-  while (d >= created && streak < 3650){
-    if (isDone(q, fmt(d))) streak++;
-    else {
-      const graceOk = streak > 0 && (!lastGrace || (lastGrace - d) / 864e5 >= 7);
-      if (graceOk) lastGrace = new Date(d);
-      else break;
+  return memo("st:" + q.id, () => {
+    const created = parseD(q.createdAt);
+    let d = new Date(); d.setHours(0,0,0,0);
+    if (!isDone(q, fmt(d))) d = addDays(d,-1);      // today pending doesn't break it
+    let streak = 0, lastGrace = null;
+    while (d >= created && streak < 3650){
+      if (isDone(q, fmt(d))) streak++;
+      else {
+        const graceOk = streak > 0 && (!lastGrace || (lastGrace - d) / 864e5 >= 7);
+        if (graceOk) lastGrace = new Date(d);
+        else break;
+      }
+      d = addDays(d,-1);
     }
-    d = addDays(d,-1);
-  }
-  return streak;
+    return streak;
+  });
 }
 /* every quest is either done today or exempt via its met weekly goal */
 const allDone = key => state.quests.length > 0 && state.quests.every(q => isDone(q,key) || weekSatisfied(q,key));
-const totalCompletions = () =>
-  state.quests.reduce((n,q) => n + Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length, 0);
+const totalCompletions = () => memo("tc", () =>
+  state.quests.reduce((n,q) => n + Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length, 0));
 /* daily-streak titles measure daily (freq-7) quests only; week-streaks aren't comparable */
-const maxStreak = () => {
+const maxStreak = () => memo("ms", () => {
   const daily = state.quests.filter(q => freqOf(q) >= 7);
-  return daily.length ? Math.max(...daily.map(streakOf)) : 0;
-};
+  return daily.length ? Math.max(...daily.map(q => streakOf(q))) : 0;
+});
 /* stat points are derived from completion logs — retro-consistent, nothing extra stored */
-function statPoints(){
-  const pts = {str:0, agi:0, vit:0, int:0, wis:0};
-  state.quests.forEach(q => {
-    const s = STATS[q.stat] ? q.stat : "str";
-    pts[s] += Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length;
+function statPoints(){   // callers read the result, never mutate it — it is shared
+  return memo("stats", () => {
+    const pts = {str:0, agi:0, vit:0, int:0, wis:0};
+    state.quests.forEach(q => {
+      const s = STATS[q.stat] ? q.stat : "str";
+      pts[s] += Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length;
+    });
+    return pts;
   });
-  return pts;
 }
 
 /* ---- quest mastery (derived from lifetime clears) ---- */
-const lifetimeClears = q => Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length;
+const lifetimeClears = q => memo("lc:" + q.id, () =>
+  Object.keys(q.log).filter(k => q.log[k] >= targetOf(q)).length);
 function masteryFromClears(n){
   let m = MASTERY[0];
   for (const x of MASTERY) if (n >= x[1]) m = x;
@@ -205,45 +243,51 @@ const masteryOf = q => masteryFromClears(lifetimeClears(q));
 
 /* ---- weekly gate raid (boss + runes, fully derived from logs) ---- */
 function raidInfo(monday){
-  const weekEndKey = fmt(addDays(monday, 6));
-  const qs = state.quests.filter(q => q.createdAt <= weekEndKey);
-  const expected = qs.reduce((n,q) => n + freqOf(q), 0);
-  if (!expected) return null;
-  const hp = Math.max(10, Math.round(expected * 10 * 0.8));   // kill ≈ 80% of expected clears
-  let clears = 0, perfectDays = 0;
-  for (let i = 0; i < 7; i++){
-    const key = fmt(addDays(monday, i));
-    let dayClears = 0, dayExpected = 0;
-    qs.forEach(q => { if (q.createdAt <= key){ dayExpected++; if (isDone(q, key)){ clears++; dayClears++; } } });
-    if (dayExpected > 0 && dayClears === dayExpected) perfectDays++;
-  }
-  const dmg = clears * 10 + perfectDays * 15;
-  const h = hashStr(fmt(monday));
-  return {
-    mondayKey: fmt(monday), boss: BOSSES[h % BOSSES.length], rune: RUNE_TYPES[h % RUNE_TYPES.length],
-    hp, dmg: Math.min(dmg, hp), rawDmg: dmg, killed: dmg >= hp, expected, clears
-  };
+  return memo("raid:" + fmt(monday), () => {
+    const weekEndKey = fmt(addDays(monday, 6));
+    const qs = state.quests.filter(q => q.createdAt <= weekEndKey);
+    const expected = qs.reduce((n,q) => n + freqOf(q), 0);
+    if (!expected) return null;
+    const hp = Math.max(10, Math.round(expected * 10 * 0.8));   // kill ≈ 80% of expected clears
+    let clears = 0, perfectDays = 0;
+    for (let i = 0; i < 7; i++){
+      const key = fmt(addDays(monday, i));
+      let dayClears = 0, dayExpected = 0;
+      qs.forEach(q => { if (q.createdAt <= key){ dayExpected++; if (isDone(q, key)){ clears++; dayClears++; } } });
+      if (dayExpected > 0 && dayClears === dayExpected) perfectDays++;
+    }
+    const dmg = clears * 10 + perfectDays * 15;
+    const h = hashStr(fmt(monday));
+    return {
+      mondayKey: fmt(monday), boss: BOSSES[h % BOSSES.length], rune: RUNE_TYPES[h % RUNE_TYPES.length],
+      hp, dmg: Math.min(dmg, hp), rawDmg: dmg, killed: dmg >= hp, expected, clears
+    };
+  });
 }
 const currentRaid = () => raidInfo(mondayOf(new Date()));
 /* rune ownership = list of weeks whose boss died; pure derivation, retro-consistent */
 function runesEarned(){
-  if (!state.quests.length) return [];
-  const first = state.quests.reduce((m,q) => q.createdAt < m ? q.createdAt : m, todayStr());
-  let mon = mondayOf(parseD(first));
-  const thisMon = mondayOf(new Date());
-  const runes = [];
-  for (let i = 0; i < 520 && mon <= thisMon; i++, mon = addDays(mon, 7)){
-    const r = raidInfo(mon);
-    if (r && r.killed) runes.push(r);
-  }
-  return runes;
+  return memo("runes", () => {
+    if (!state.quests.length) return [];
+    const first = state.quests.reduce((m,q) => q.createdAt < m ? q.createdAt : m, todayStr());
+    let mon = mondayOf(parseD(first));
+    const thisMon = mondayOf(new Date());
+    const runes = [];
+    for (let i = 0; i < 520 && mon <= thisMon; i++, mon = addDays(mon, 7)){
+      const r = raidInfo(mon);
+      if (r && r.killed) runes.push(r);
+    }
+    return runes;
+  });
 }
 /* penalty: last week's boss escaped → runes sleep until 3 clears land this week */
 function runesDormant(){
-  const last = raidInfo(addDays(mondayOf(new Date()), -7));
-  if (!last || last.killed) return false;
-  const cur = currentRaid();
-  return !cur || cur.clears < 3;
+  return memo("dormant", () => {
+    const last = raidInfo(addDays(mondayOf(new Date()), -7));
+    if (!last || last.killed) return false;
+    const cur = currentRaid();
+    return !cur || cur.clears < 3;
+  });
 }
 /* each awake rune adds +1 EXP per quest clear, capped at +5 */
 function runeBonusXP(){
