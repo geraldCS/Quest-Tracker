@@ -41,9 +41,9 @@ self.addEventListener("fetch", e => {
     caches.match(e.request).then(hit =>
       hit ||
       fetch(e.request).then(res => {
-        // cache same-origin files and Google Fonts as they arrive
-        const url = e.request.url;
-        if (res.ok && (url.startsWith(self.location.origin) || url.includes("fonts.g"))){
+        // cache same-origin files as they arrive; the fonts are local now, so
+        // there is no third-party host left to special-case
+        if (res.ok && e.request.url.startsWith(self.location.origin)){
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, copy));
         }
