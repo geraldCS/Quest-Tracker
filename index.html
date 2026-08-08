@@ -89,11 +89,10 @@
       </div>
 
       <div id="seg-side" hidden>
-        <div class="section-head"><h2>SIDE QUESTS</h2></div>
-        <form class="todo-form" id="todoForm">
-          <input type="text" id="todoInput" placeholder="Log a side quest…" maxlength="200" autocomplete="off">
-          <button type="submit" aria-label="Add side quest">+</button>
-        </form>
+        <div class="section-head">
+          <h2>SIDE QUESTS</h2>
+          <button class="pill-btn" id="addTodoBtn">+ NEW SIDE QUEST</button>
+        </div>
         <ul id="todoList"></ul>
       </div>
     </section>
@@ -232,7 +231,7 @@
   <div class="sheet">
     <div class="sheet-notch" aria-hidden="true"></div>
     <div class="sheet-head">
-      <h3>SIDE QUEST</h3>
+      <h3 id="todoSheetTitle">SIDE QUEST</h3>
       <button class="sheet-x" aria-label="Close">✕</button>
     </div>
     <div class="sheet-body">

@@ -138,17 +138,18 @@
     /* fill-mode must NOT be 'both'/'forwards': a forward-filled `transform:none`
        overrides the inline transforms the drag code writes (animations beat inline styles) */
     animation:slideIn .3s cubic-bezier(.22,1,.36,1) backwards;position:relative;
+    /* the row itself is the drag grip now — don't let a hold select text or raise
+       the iOS callout */
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
   }
+  /* press-and-hold feedback. Deliberately `filter`, never `transform`: a transform
+     here would be one more thing fighting the drag code's inline transforms. */
+  .quest.press-hold,.todo.press-hold{filter:brightness(1.22)}
   @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .quest.dragging,.todo.dragging{
     z-index:10;box-shadow:0 0 26px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.12);
     border-color:var(--sys);transition:none;
   }
-  .drag-handle{
-    color:var(--ink-soft);cursor:grab;font-size:1rem;padding:6px 2px;flex-shrink:0;
-    touch-action:none;user-select:none;line-height:1;
-  }
-  .drag-handle:active{cursor:grabbing}
   .check{
     width:42px;height:42px;border-radius:9px;flex-shrink:0;cursor:pointer;
     border:1.5px solid var(--hc,var(--sys));background:transparent;
@@ -193,18 +194,6 @@
   .rem-dot{font-size:.68rem;color:var(--violet)}
 
   /* ============ side quests ============ */
-  .todo-form{display:flex;gap:8px;margin-bottom:12px}
-  .todo-form input{
-    flex:1;border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:9px;
-    padding:11px 15px;font:inherit;color:var(--ink);outline:none;transition:border-color .2s;
-  }
-  .todo-form input::placeholder{color:var(--ink-soft)}
-  .todo-form input:focus{border-color:var(--sys);box-shadow:0 0 10px var(--sys-glow)}
-  .todo-form button{
-    width:44px;height:44px;border-radius:9px;border:1px solid var(--line);
-    background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
-    color:var(--ink);font-size:1.4rem;cursor:pointer;flex-shrink:0;font-weight:700;
-  }
   .todo .check{width:32px;height:32px;border-radius:8px;border-color:var(--violet)}
   .todo .check svg{width:16px;height:16px}
   .todo.done > .check{background:var(--violet);box-shadow:0 0 12px var(--violet)}
@@ -652,7 +641,6 @@
   }
 
   /* ============ drag lift ============ */
-  .drag-handle{padding:10px 6px}
   .quest.dragging,.todo.dragging{
     box-shadow:0 6px 30px rgba(0,0,0,.5), 0 0 26px var(--sys-glow), inset 0 0 24px rgba(74,168,255,.12);
   }

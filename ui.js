@@ -115,7 +115,6 @@ function renderQuests(){
     if (q.target){
       const amtOpen = openAmounts.has(q.id);
       li.innerHTML = `
-        <span class="drag-handle" aria-hidden="true">⠿</span>
         <button class="check" aria-label="Toggle ${esc(q.name)}">${checkSVG}</button>
         <div class="quest-info">
           <div class="quest-name">${nameHTML}</div>
@@ -145,7 +144,6 @@ function renderQuests(){
       li.querySelector(".minus").onclick = () => setProgress(q, t, prog - smartStep(q));
     } else {
       li.innerHTML = `
-        <span class="drag-handle" aria-hidden="true">⠿</span>
         <button class="check" aria-label="Toggle ${esc(q.name)}">${checkSVG}</button>
         <div class="quest-info">
           <div class="quest-name">${nameHTML}</div>
@@ -168,7 +166,7 @@ function renderTodos(){
   sc.hidden = openCount === 0;
   sc.textContent = openCount;
   if (!state.todos.length){
-    list.innerHTML = `<li class="empty"><span class="big">🗡️</span>No side quests logged. The board is clear.</li>`;
+    list.innerHTML = `<li class="empty"><span class="big">🗡️</span>No side quests logged. The board is clear.<br>Tap “+ NEW SIDE QUEST” to add one.</li>`;
     return;
   }
   list.innerHTML = "";
@@ -178,7 +176,6 @@ function renderTodos(){
     const diffChip = td.diff && td.diff !== "easy"
       ? `<span class="diff-tag ${td.diff}">+${diffXP(td)}</span>` : "";
     li.innerHTML = `
-      <span class="drag-handle" aria-hidden="true">⠿</span>
       <button class="check" aria-label="Toggle task">${checkSVG}</button>
       <div class="todo-text" role="button" title="Edit side quest">${esc(td.text)}${diffChip}${td.daily ? `<span class="daily-tag">DAILY</span>` : ""}</div>
       <button class="daily-btn${td.daily ? " on" : ""}" aria-label="Toggle daily repeat" title="${td.daily ? "Repeats daily — resets at midnight" : "Make this a daily side quest"}">⟳</button>
@@ -197,14 +194,7 @@ function renderTodos(){
     list.appendChild(li);
   });
 }
-document.getElementById("todoForm").addEventListener("submit", e => {
-  e.preventDefault();
-  const input = document.getElementById("todoInput");
-  const text = input.value.trim();
-  if (!text) return;
-  state.todos.push({id:uid(), text, done:false, daily:false, doneOn:null, rewardedOn:null, diff:"easy"});
-  input.value = ""; save(); renderTodos();
-});
+document.getElementById("addTodoBtn").onclick = () => openTodoSheet(null);   // null = new side quest
 
 /* ================= daily / side segments ================= */
 document.querySelectorAll(".seg-row .seg[data-seg]").forEach(btn => {
@@ -232,20 +222,28 @@ function buildDiffRow(){
   });
 }
 function openTodoSheet(td){
-  editingTodo = td;
-  selDiff = DIFF_XP[td.diff] ? td.diff : "easy";
-  document.getElementById("todoTextInput").value = td.text;
-  document.getElementById("todoDailyChk").checked = !!td.daily;
+  editingTodo = td;                                  // null while creating a new one
+  selDiff = td && DIFF_XP[td.diff] ? td.diff : "easy";
+  document.getElementById("todoTextInput").value = td ? td.text : "";
+  document.getElementById("todoDailyChk").checked = !!(td && td.daily);
+  document.getElementById("todoSheetTitle").textContent = td ? "SIDE QUEST" : "NEW SIDE QUEST";
+  document.getElementById("todoDeleteBtn").style.display = td ? "" : "none";
   buildDiffRow();
   todoOverlay.classList.add("open");
 }
 function closeTodoSheet(){ todoOverlay.classList.remove("open"); editingTodo = null; }
 document.getElementById("todoSaveBtn").onclick = () => {
-  if (!editingTodo) return;
   const text = document.getElementById("todoTextInput").value.trim();
-  if (text) editingTodo.text = text.slice(0, 200);
-  editingTodo.diff = selDiff;
-  editingTodo.daily = document.getElementById("todoDailyChk").checked;
+  const daily = document.getElementById("todoDailyChk").checked;
+  if (!editingTodo){
+    if (!text){ sysAlert("Name the side quest before you log it."); return; }
+    state.todos.push({id:uid(), text:text.slice(0,200), done:false, daily,
+                      doneOn:null, rewardedOn:null, diff:selDiff});
+  } else {
+    if (text) editingTodo.text = text.slice(0, 200);
+    editingTodo.diff = selDiff;
+    editingTodo.daily = daily;
+  }
   save(); closeTodoSheet(); renderTodos();
 };
 document.getElementById("todoDeleteBtn").onclick = () => {
@@ -321,22 +319,46 @@ raidOverlay.addEventListener("click", e => { if (e.target === raidOverlay) raidO
 /* ================= drag reorder (pointer events) ================= */
 function makeSortable(listEl, getArr){
   let drag = null, scrollVel = 0, scrollLoop = null;
-  listEl.addEventListener("pointerdown", e => {
-    const handle = e.target.closest(".drag-handle");
-    if (!handle || !e.isPrimary) return;
-    const row = handle.closest("li.sortable");
-    if (!row) return;
-    e.preventDefault();
+  /* No grab handle: a press-and-hold anywhere on the row starts the drag. Moving
+     before the hold completes means the user is scrolling, so the press is dropped. */
+  const HOLD_MS = 250, HOLD_SLOP = 8;
+  let press = null, swallowClick = false;
+  const cancelPress = () => {
+    if (!press) return;
+    clearTimeout(press.timer);
+    press.row.classList.remove("press-hold");
+    press = null;
+  };
+  function beginDrag(row, clientY, pointerId){
     const items = [...listEl.querySelectorAll("li.sortable")];
     // page coordinates, so auto-scrolling mid-drag keeps the math consistent
     const mids = items.map(it => { const r = it.getBoundingClientRect(); return r.top + r.height/2 + scrollY; });
     drag = { row, items, mids, start: items.indexOf(row), cur: items.indexOf(row),
-             pageY0: e.clientY + scrollY, lastClientY: e.clientY,
+             pageY0: clientY + scrollY, lastClientY: clientY,
              h: row.getBoundingClientRect().height + 9 };
     listEl.classList.add("drag-live");   // kill entrance animations so inline transforms always win
+    row.classList.remove("press-hold");  // drop the hold tint before any inline transform lands
     row.classList.add("dragging");
-    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+    buzz(12);                            // the hold has taken — tell the thumb
+    try{ listEl.setPointerCapture(pointerId); }catch(_){}
+  }
+  listEl.addEventListener("pointerdown", e => {
+    if (!e.isPrimary) return;
+    if (e.target.closest("button, input, textarea, a, label")) return;   // controls keep their own taps
+    const row = e.target.closest("li.sortable");
+    if (!row) return;
+    const y = e.clientY, x = e.clientX, id = e.pointerId;
+    press = { row, x, y, timer: setTimeout(() => { press = null; beginDrag(row, y, id); }, HOLD_MS) };
+    row.classList.add("press-hold");
   });
+  /* touch-action can't be flipped mid-gesture, so the scroll has to be refused here */
+  listEl.addEventListener("touchmove", e => { if (drag) e.preventDefault(); }, {passive:false});
+  /* a long-press that became a drag must not also fire the row's click handler */
+  listEl.addEventListener("click", e => {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault(); e.stopPropagation();
+  }, true);
   function updateDrag(){
     if (!drag) return;
     const dy = (drag.lastClientY + scrollY) - drag.pageY0;
@@ -367,6 +389,10 @@ function makeSortable(listEl, getArr){
     updateDrag();
   }
   listEl.addEventListener("pointermove", e => {
+    if (press){   // still deciding: past the slop it's a scroll, not a hold
+      if (Math.abs(e.clientY - press.y) > HOLD_SLOP || Math.abs(e.clientX - press.x) > HOLD_SLOP) cancelPress();
+      return;
+    }
     if (!drag) return;
     drag.lastClientY = e.clientY;
     const EDGE = 80;   // auto-scroll when the pointer nears the viewport edge
@@ -378,9 +404,11 @@ function makeSortable(listEl, getArr){
     updateDrag();
   });
   const end = () => {
+    cancelPress();          // released before the hold completed — that was just a tap
     scrollVel = 0;
     if (scrollLoop){ clearInterval(scrollLoop); scrollLoop = null; }
     if (!drag) return;
+    swallowClick = true;    // the click that follows this release belongs to the drag
     const { row, items, start, cur } = drag;
     drag = null;
     row.classList.remove("dragging");
@@ -702,6 +730,7 @@ document.getElementById("saveQuestBtn").onclick = () => {
   } else {
     state.quests.push({id:uid(), name, stat:selStat, color:selColor, createdAt:todayStr(), target, reminder, freq, log:{}});
   }
+  touchState();   // an edited target changes isDone() for every logged day, not just new ones
   if (reminder && !hadReminder && ("Notification" in window) && Notification.permission === "default"){
     try{ Notification.requestPermission(); }catch(_){}
   }
@@ -712,6 +741,7 @@ document.getElementById("deleteQuestBtn").onclick = () => {
   if (!confirm(`Abandon quest “${editing.name}” and its records?`)) return;
   state.meta.deleted[editing.id] = todayStr();   // tombstone so sync propagates the deletion
   state.quests = state.quests.filter(q => q.id !== editing.id);
+  touchState();
   save(); closeQuestSheet(); renderAll();
 };
 document.getElementById("questNameInput").addEventListener("keydown", e => {
@@ -890,6 +920,7 @@ importFile.onchange = () => {
       if (!data || data.version !== 2 || !Array.isArray(data.quests)) throw new Error("bad shape");
       if (!confirm("Import this save file? Your current data will be replaced.")) return;
       state = normalize(data);
+      touchState();
       save(); renderAll();
       toast("SAVE IMPORTED — Welcome back, Hunter.");
     }catch(e){
