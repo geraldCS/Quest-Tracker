@@ -1,3 +1,31 @@
+  /* ============ self-hosted type ============
+     These were loading from fonts.googleapis.com and were NOT in the service
+     worker's shell, so the whole visual identity fell back to Segoe UI the
+     moment the network went away. Local + cached, so the System looks like the
+     System on a plane. Latin subset, 56.9 KB total.
+     Orbitron ships as a variable font — one file covers 500..900. */
+  @font-face{
+    font-family:"Orbitron";
+    src:url("fonts/orbitron-var-latin.woff2") format("woff2-variations"),
+        url("fonts/orbitron-var-latin.woff2") format("woff2");
+    font-weight:500 900; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-500-latin.woff2") format("woff2");
+    font-weight:500; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-600-latin.woff2") format("woff2");
+    font-weight:600; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-700-latin.woff2") format("woff2");
+    font-weight:700; font-style:normal; font-display:swap;
+  }
+
   :root{
     --bg:#04060d;
     --panel:rgba(12,24,48,.55);

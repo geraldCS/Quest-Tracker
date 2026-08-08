@@ -1,5 +1,5 @@
 /* ARISE service worker — cache-first app shell so the tracker works offline */
-const CACHE = "arise-v6";
+const CACHE = "arise-v7";
 const SHELL = [
   "./",
   "index.html",
@@ -12,7 +12,13 @@ const SHELL = [
   "manifest.json",
   "icons/icon.svg",
   "icons/icon-192.png",
-  "icons/icon-512.png"
+  "icons/icon-512.png",
+  // without these the app loses its typefaces offline, which is the first thing
+  // you notice and the whole reason they stopped being loaded from a CDN
+  "fonts/orbitron-var-latin.woff2",
+  "fonts/rajdhani-500-latin.woff2",
+  "fonts/rajdhani-600-latin.woff2",
+  "fonts/rajdhani-700-latin.woff2"
 ];
 
 self.addEventListener("install", e => {
