@@ -72,7 +72,22 @@ if (!state.player.onboarded) openOnboarding();
 else if (!state.player.name) openNameSheet();
 systemTick();
 
-/* ================= PWA (no-op on file:// and on localhost dev) ================= */
+/* ================= PWA (no-op on file:// and on localhost dev) =================
+   updateViaCache:"none" matters more than it looks. GitHub Pages serves sw.js
+   with Cache-Control: max-age=600, and the default ("imports") lets the browser
+   satisfy the update check from that HTTP cache. Combined with a cache-first
+   fetch handler, an installed app can then serve stale files for as long as the
+   old sw.js stays cached — with no way for the user to break out. "none" forces
+   every update check to hit the network.
+
+   The explicit update() on resume covers iOS, where returning to a home-screen
+   app from the app switcher is not a navigation and so triggers no check. */
 if ("serviceWorker" in navigator && location.protocol !== "file:" && location.hostname !== "localhost"){
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+    .then(reg => {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) reg.update().catch(() => {});
+      });
+    })
+    .catch(() => {});
 }

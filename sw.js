@@ -1,5 +1,5 @@
 /* ARISE service worker — cache-first app shell so the tracker works offline */
-const CACHE = "arise-v7";
+const CACHE = "arise-v8";
 const SHELL = [
   "./",
   "index.html",
@@ -22,8 +22,13 @@ const SHELL = [
 ];
 
 self.addEventListener("install", e => {
+  // cache:"reload" on every shell request: Pages serves these with max-age=600,
+  // and a plain addAll() is allowed to satisfy itself from that HTTP cache — which
+  // means a fresh install can bake ten-minute-old files into a brand new cache.
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
   );
 });
 
