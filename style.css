@@ -1,3 +1,31 @@
+  /* ============ self-hosted type ============
+     These were loading from fonts.googleapis.com and were NOT in the service
+     worker's shell, so the whole visual identity fell back to Segoe UI the
+     moment the network went away. Local + cached, so the System looks like the
+     System on a plane. Latin subset, 56.9 KB total.
+     Orbitron ships as a variable font — one file covers 500..900. */
+  @font-face{
+    font-family:"Orbitron";
+    src:url("fonts/orbitron-var-latin.woff2") format("woff2-variations"),
+        url("fonts/orbitron-var-latin.woff2") format("woff2");
+    font-weight:500 900; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-500-latin.woff2") format("woff2");
+    font-weight:500; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-600-latin.woff2") format("woff2");
+    font-weight:600; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"Rajdhani";
+    src:url("fonts/rajdhani-700-latin.woff2") format("woff2");
+    font-weight:700; font-style:normal; font-display:swap;
+  }
+
   :root{
     --bg:#04060d;
     --panel:rgba(12,24,48,.55);
@@ -14,19 +42,52 @@
     --radius:10px;
     --font-head:"Orbitron","Segoe UI",system-ui,sans-serif;
     --font-body:"Rajdhani","Segoe UI",system-ui,sans-serif;
+
+    /* Type scale — seven steps, floor 13px. Replaces 31 ad-hoc sizes, 51 of which
+       sat below 13px. Orbitron is a display face: it renders at --fs-lg and above
+       only, never for UI text. */
+    --fs-xs:      .8125rem;   /* 13px — stat labels, tags, chips, meta, counts */
+    --fs-sm:      .875rem;    /* 14px — secondary text, notes, dates, hints     */
+    --fs-base:    1rem;       /* 16px — quest titles, body, list text           */
+    --fs-lg:      1.125rem;   /* 18px — section headings, boss name             */
+    --fs-xl:      1.375rem;   /* 22px — panel titles                            */
+    --fs-2xl:     1.75rem;    /* 28px — stat numbers, EXP figures               */
+    --fs-display: 2.75rem;    /* 44px — level number                            */
+
+    /* Caps need tracking; the old values (up to .25em) destroyed word shapes at
+       small sizes, which is what made the text hard to read. */
+    --tr-caps-sm: .06em;
+    --tr-caps-lg: .12em;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html{font-size:16px}
+  /* 100%, not a hard 16px: the whole scale is in rem, so this is what lets a
+     browser-level default-font-size preference reach the app at all. */
+  html{font-size:100%;-webkit-text-size-adjust:100%}
   body{
     font-family:var(--font-body);
     background:radial-gradient(ellipse at 50% -10%, #0b1430 0%, var(--bg) 55%) fixed, var(--bg);
     color:var(--ink);min-height:100vh;overflow-x:hidden;letter-spacing:.02em;
+    /* Light text on a near-black background: Apple's default subpixel
+       antialiasing thickens and softens the letterforms. Grayscale AA renders
+       them noticeably crisper, which is most of what "sharper" means here. */
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
   }
   .scanlines{
     position:fixed;inset:0;pointer-events:none;z-index:1;
     background:repeating-linear-gradient(0deg, rgba(120,180,255,.03) 0 1px, transparent 1px 3px);
   }
-  .app{max-width:640px;margin:0 auto;padding:0 14px 110px;position:relative;z-index:2}
+  /* index.html sets viewport-fit=cover, which extends the page under the Dynamic
+     Island and the home indicator. Every edge-anchored element has to pay the
+     insets back or content sits underneath them. */
+  .app{
+    max-width:640px;margin:0 auto;position:relative;z-index:2;
+    padding-top:env(safe-area-inset-top);
+    padding-left:max(14px, env(safe-area-inset-left));
+    padding-right:max(14px, env(safe-area-inset-right));
+    padding-bottom:calc(110px + env(safe-area-inset-bottom));
+  }
 
   /* ============ panel recipe ============ */
   .panel{
@@ -52,8 +113,8 @@
   .status-win::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--sys);border-right:2px solid var(--sys)}
   .status-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .sys-tag{
-    font-family:var(--font-head);font-size:.68rem;letter-spacing:.35em;color:var(--sys);
-    text-shadow:0 0 8px var(--sys-glow);font-weight:700;
+    font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--sys);
+    text-shadow:0 0 4px var(--sys-glow);font-weight:700;
   }
   .icon-btn{
     border:1px solid var(--line);background:transparent;color:var(--ink-soft);
@@ -62,26 +123,26 @@
   .icon-btn:hover{border-color:var(--sys);color:var(--ink)}
   .status-main{display:flex;align-items:center;gap:16px}
   .lv-block{text-align:center;flex-shrink:0}
-  .lv-label{font-family:var(--font-head);font-size:.65rem;letter-spacing:.25em;color:var(--ink-soft);display:block}
+  .lv-label{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);display:block}
   .lv-num{
-    font-family:var(--font-head);font-weight:900;font-size:2.6rem;line-height:1;
+    font-family:var(--font-head);font-weight:900;font-size:var(--fs-display);line-height:1;
     color:#fff;text-shadow:0 0 16px var(--sys),0 0 36px var(--sys-glow);
   }
   .status-info{flex:1;min-width:0}
   .player-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .p-label{font-family:var(--font-head);font-size:.62rem;letter-spacing:.2em;color:var(--ink-soft)}
-  .p-name{font-family:var(--font-head);font-weight:700;font-size:.95rem;text-transform:uppercase;letter-spacing:.08em}
-  .edit-name{border:0;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:.85rem;padding:2px 4px}
+  .p-label{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft)}
+  .p-name{font-family:var(--font-head);font-weight:700;font-size:var(--fs-lg);text-transform:uppercase;letter-spacing:var(--tr-caps-lg)}
+  .edit-name{border:0;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:var(--fs-base);padding:2px 4px}
   .edit-name:hover{color:var(--sys)}
   .rank-badge{
-    font-family:var(--font-head);font-weight:900;font-size:.8rem;
+    font-family:var(--font-head);font-weight:900;font-size:var(--fs-lg);
     border:1px solid currentColor;border-radius:6px;padding:2px 8px;
-    text-shadow:0 0 8px currentColor;
+    text-shadow:0 0 4px currentColor;
   }
   .title-line{
     border:0;background:transparent;color:var(--gold);font-family:var(--font-body);
-    font-weight:600;font-size:.85rem;cursor:pointer;padding:2px 0;letter-spacing:.06em;
-    text-shadow:0 0 10px rgba(245,197,66,.4);display:block;
+    font-weight:600;font-size:var(--fs-base);cursor:pointer;padding:2px 0;letter-spacing:.06em;
+    text-shadow:0 0 5px rgba(245,197,66,.4);display:block;
   }
   .title-line:disabled{color:var(--ink-soft);text-shadow:none;cursor:default}
   .exp-bar{
@@ -93,40 +154,46 @@
     background:linear-gradient(90deg,var(--sys),var(--violet));
     box-shadow:0 0 10px var(--sys-glow);transition:width .5s cubic-bezier(.22,1,.36,1);
   }
-  .exp-text{font-size:.75rem;color:var(--ink-soft);margin-top:4px;font-weight:600;letter-spacing:.06em}
+  .exp-text{font-size:var(--fs-sm);color:var(--ink-soft);margin-top:4px;font-weight:600;letter-spacing:.06em}
   .ring-wrap{position:relative;width:76px;height:76px;flex-shrink:0}
   .ring-wrap svg{transform:rotate(-90deg)}
   .ring-bg{stroke:rgba(74,168,255,.15)}
   .ring-fg{stroke:var(--sys);stroke-linecap:round;filter:drop-shadow(0 0 5px var(--sys));transition:stroke-dashoffset .5s cubic-bezier(.22,1,.36,1)}
   .ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font-head)}
-  .ring-label b{font-size:.9rem;font-weight:700}
-  .ring-label span{font-size:.5rem;letter-spacing:.15em;color:var(--ink-soft)}
-  .head-sub{margin-top:12px;font-size:.85rem;color:var(--ink-soft);font-weight:600;letter-spacing:.04em}
-  .date-line{font-size:.72rem;color:var(--ink-soft);letter-spacing:.2em;text-transform:uppercase;font-weight:600}
+  .ring-label b{font-size:var(--fs-base);font-weight:700}
+  /* font-family comes from .ring-label above, so the eviction has to be explicit */
+  .ring-label span{font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);font-family:var(--font-body)}
+  .head-sub{margin-top:12px;font-size:var(--fs-base);color:var(--ink-soft);font-weight:600;letter-spacing:.04em}
+  .date-line{font-size:var(--fs-xs);color:var(--ink-soft);letter-spacing:.2em;text-transform:uppercase;font-weight:600}
 
   /* ============ tabs ============ */
   .tabs{display:flex;gap:6px;margin:16px 0 18px;padding:5px}
   .tabs button{
-    flex:1;border:0;background:transparent;font-family:var(--font-head);font-size:.72rem;
+    flex:1;border:0;background:transparent;font-family:var(--font-body);font-size:var(--fs-xs);
     font-weight:700;letter-spacing:.18em;padding:11px 0;border-radius:7px;
     color:var(--ink-soft);cursor:pointer;transition:all .2s;
   }
   .tabs button.active{
     background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
-    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 4px var(--sys);
     box-shadow:0 0 14px var(--sys-glow);
   }
 
   /* ============ sections ============ */
-  .section-head{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
+  .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 2px 10px}
+  /* The date used to sit inline inside the h2. At 18px headings it no longer fit
+     beside the action button on a 375px screen, so it wrapped to a second line
+     indented under the title and looked like a bug. It is a deliberate subtitle
+     now, and the title itself never wraps. */
+  .head-titles{display:flex;flex-direction:column;gap:1px;min-width:0}
   .section-head h2{
-    font-family:var(--font-head);font-size:.8rem;font-weight:700;letter-spacing:.25em;
-    color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
+    font-family:var(--font-head);font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--tr-caps-lg);
+    color:var(--sys);text-shadow:0 0 4px var(--sys-glow);white-space:nowrap;
   }
   .pill-btn{
     border:1px solid var(--line);background:linear-gradient(135deg,rgba(74,168,255,.2),rgba(139,92,246,.2));
     color:var(--ink);font-family:var(--font-body);font-weight:700;letter-spacing:.08em;
-    padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;
+    padding:8px 16px;border-radius:8px;cursor:pointer;font-size:var(--fs-base);
     box-shadow:0 0 10px rgba(74,168,255,.2);transition:transform .15s;
   }
   .pill-btn:active{transform:scale(.94)}
@@ -165,20 +232,20 @@
   .done > .check path{stroke-dashoffset:0}
   @keyframes pop{0%{transform:scale(.7)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
   .quest-info{flex:1;min-width:0}
-  .quest-name{font-weight:700;font-size:1rem;letter-spacing:.03em}
+  .quest-name{font-weight:700;font-size:var(--fs-base);letter-spacing:.03em}
   .quest.done .quest-name{opacity:.55}
   .q-emoji{
     display:inline-flex;align-items:center;justify-content:center;
     background:rgba(219,233,255,.09);border-radius:6px;padding:1px 4px;margin-right:4px;
   }
-  .quest-meta{font-size:.75rem;color:var(--ink-soft);margin-top:2px;font-weight:600;letter-spacing:.04em}
-  .streak-hot{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.35)}
-  .clear-tag{color:var(--sys);font-family:var(--font-head);font-size:.62rem;letter-spacing:.2em;text-shadow:0 0 8px var(--sys-glow)}
+  .quest-meta{font-size:var(--fs-xs);color:var(--ink-soft);margin-top:2px;font-weight:600;letter-spacing:.04em}
+  .streak-hot{color:var(--gold);text-shadow:0 0 4px rgba(245,197,66,.35)}
+  .clear-tag{color:var(--sys);font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);text-shadow:0 0 4px var(--sys-glow)}
   .q-progress{display:flex;align-items:center;gap:8px;margin-top:6px}
   .q-bar{flex:1;height:7px;border:1px solid var(--line-dim);border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden}
   .q-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--hc,var(--sys)),var(--violet));box-shadow:0 0 8px var(--hc,var(--sys));transition:width .3s;border-radius:3px}
   .quest.done .q-bar i{background:linear-gradient(90deg,var(--gold),#ffdf85);box-shadow:0 0 8px var(--gold)}
-  .q-count{font-size:.72rem;font-weight:700;color:var(--ink-soft);white-space:nowrap;letter-spacing:.03em}
+  .q-count{font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);white-space:nowrap;letter-spacing:.03em}
   .steppers{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
   .step{
     width:34px;height:26px;border-radius:7px;border:1px solid var(--line);
@@ -191,13 +258,13 @@
     cursor:pointer;padding:6px;border-radius:8px;line-height:1;flex-shrink:0;
   }
   .more-btn:hover{color:var(--sys)}
-  .rem-dot{font-size:.68rem;color:var(--violet)}
+  .rem-dot{font-size:var(--fs-xs);color:var(--violet)}
 
   /* ============ side quests ============ */
   .todo .check{width:32px;height:32px;border-radius:8px;border-color:var(--violet)}
   .todo .check svg{width:16px;height:16px}
   .todo.done > .check{background:var(--violet);box-shadow:0 0 12px var(--violet)}
-  .todo-text{flex:1;font-weight:600;font-size:.95rem}
+  .todo-text{flex:1;font-weight:600;font-size:var(--fs-base)}
   .todo.done .todo-text{text-decoration:line-through;opacity:.45}
   .del-btn{border:0;background:transparent;color:var(--ink-soft);font-size:1rem;cursor:pointer;padding:6px;border-radius:8px}
   .del-btn:hover{color:var(--danger)}
@@ -211,11 +278,11 @@
   /* ============ week view ============ */
   .week-card{padding:14px;margin-bottom:12px;animation:slideIn .3s backwards}
   .week-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-  .week-card-head .quest-name{font-size:.92rem}
-  .week-pct{font-size:.72rem;font-weight:700;color:var(--ink-soft);letter-spacing:.06em}
+  .week-card-head .quest-name{font-size:var(--fs-base)}
+  .week-pct{font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);letter-spacing:.06em}
   .week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .day-col{display:flex;flex-direction:column;align-items:center;gap:5px}
-  .day-letter{font-size:.62rem;font-weight:700;color:var(--ink-soft);font-family:var(--font-head)}
+  .day-letter{font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);font-family:var(--font-body)}
   .day-dot{
     width:100%;aspect-ratio:1;max-width:44px;border-radius:8px;cursor:pointer;
     border:1px solid var(--line-dim);background:rgba(0,0,0,.3);transition:all .2s;
@@ -226,28 +293,28 @@
   .day-dot.on .fill{display:none}
   .day-dot.today-dot{outline:1.5px solid var(--hc,var(--sys));outline-offset:2px}
   .day-dot.future{opacity:.25;cursor:default}
-  .grace-note{text-align:center;font-size:.76rem;color:var(--ink-soft);font-weight:600;margin-top:16px;letter-spacing:.04em}
+  .grace-note{text-align:center;font-size:var(--fs-sm);color:var(--ink-soft);font-weight:600;margin-top:16px;letter-spacing:.04em}
 
   /* ============ records ============ */
   .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .month-nav h3{font-family:var(--font-head);font-size:.9rem;font-weight:700;letter-spacing:.15em}
+  .month-nav h3{font-family:var(--font-head);font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--tr-caps-lg)}
   .month-nav button{
     border:1px solid var(--line);background:rgba(74,168,255,.08);width:38px;height:38px;
     border-radius:9px;font-size:1.1rem;cursor:pointer;color:var(--ink);font-weight:700;
   }
   .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:14px}
-  .month-grid .dow{text-align:center;font-size:.6rem;font-weight:700;color:var(--ink-soft);padding-bottom:4px;font-family:var(--font-head);letter-spacing:.1em}
+  .month-grid .dow{text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);padding-bottom:4px;font-family:var(--font-body);letter-spacing:var(--tr-caps-sm)}
   .m-day{
     aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;
-    font-size:.72rem;font-weight:700;background:rgba(74,168,255,.05);color:var(--ink-soft);
+    font-size:var(--fs-xs);font-weight:700;background:rgba(74,168,255,.05);color:var(--ink-soft);
     border:1px solid transparent;cursor:pointer;font-family:var(--font-body);
   }
   button.m-day:hover{border-color:var(--sys)}
   .m-day.future{opacity:.3;cursor:default}
   .m-day.is-today{outline:1.5px solid var(--sys);outline-offset:1px}
-  .legend{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-size:.72rem;color:var(--ink-soft);font-weight:600}
+  .legend{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-size:var(--fs-xs);color:var(--ink-soft);font-weight:600}
   .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
-  .records-hint{text-align:center;font-size:.76rem;color:var(--ink-soft);font-weight:600;margin-top:10px;letter-spacing:.04em}
+  .records-hint{text-align:center;font-size:var(--fs-sm);color:var(--ink-soft);font-weight:600;margin-top:10px;letter-spacing:.04em}
 
   /* ============ modal sheets ============ */
   .overlay{
@@ -304,10 +371,10 @@
     .sheet-notch{display:none}
   }
   .sheet h3{
-    font-family:var(--font-head);font-size:.85rem;font-weight:700;letter-spacing:.25em;
-    margin-bottom:16px;color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
+    font-family:var(--font-head);font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--tr-caps-lg);
+    margin-bottom:16px;color:var(--sys);text-shadow:0 0 5px var(--sys-glow);
   }
-  .sheet label{display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.15em;font-family:var(--font-head)}
+  .sheet label{display:block;font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:var(--tr-caps-sm);font-family:var(--font-body)}
   .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet input[type=password],.sheet select{
     width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
     font:inherit;color:var(--ink);outline:none;background:rgba(0,0,0,.35);
@@ -326,10 +393,10 @@
   .field-row > div{flex:1}
   .toggle-row{display:flex;align-items:center;gap:10px;margin-top:14px}
   .toggle-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--sys)}
-  .toggle-row span{font-weight:600;font-size:.9rem}
-  .sheet-note{font-size:.75rem;color:var(--ink-soft);margin-top:8px;font-weight:600}
+  .toggle-row span{font-weight:600;font-size:var(--fs-base)}
+  .sheet-note{font-size:var(--fs-sm);color:var(--ink-soft);margin-top:8px;font-weight:600}
   .sheet-actions{display:flex;gap:10px;margin-top:22px}
-  .sheet-actions .pill-btn{flex:1;padding:13px 0;font-size:.92rem;letter-spacing:.1em}
+  .sheet-actions .pill-btn{flex:1;padding:13px 0;font-size:var(--fs-base);letter-spacing:.1em}
 
   /* ============ first-run onboarding ============ */
   .ob-dots{display:flex;gap:6px;justify-content:center;margin:0 0 16px}
@@ -342,12 +409,12 @@
   .ob-quests li{
     display:flex;align-items:center;gap:9px;padding:11px 12px;
     border:1px solid var(--line-dim);border-radius:10px;background:rgba(0,0,0,.22);
-    font-size:.9rem;font-weight:600;
+    font-size:var(--fs-base);font-weight:600;
   }
-  .ob-q-meta{margin-left:auto;font-size:.7rem;color:var(--ink-soft);letter-spacing:.06em;white-space:nowrap}
+  .ob-q-meta{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-soft);letter-spacing:.06em;white-space:nowrap}
   .ob-rules{list-style:none;display:flex;flex-direction:column;gap:12px;margin-top:14px}
   .ob-rules li{
-    position:relative;padding-left:18px;font-size:.86rem;color:var(--ink-soft);line-height:1.55;
+    position:relative;padding-left:18px;font-size:var(--fs-sm);color:var(--ink-soft);line-height:1.55;
   }
   .ob-rules li::before{content:"▸";position:absolute;left:0;top:0;color:var(--sys)}
   .ob-rules b{color:var(--ink);font-weight:700}
@@ -361,9 +428,9 @@
   /* day editor rows */
   .de-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line-dim)}
   .de-row:last-of-type{border-bottom:0}
-  .de-row .quest-name{font-size:.92rem;flex:1;min-width:0}
+  .de-row .quest-name{font-size:var(--fs-base);flex:1;min-width:0}
   .de-steppers{display:flex;align-items:center;gap:8px}
-  .de-count{font-size:.78rem;font-weight:700;color:var(--ink-soft);min-width:64px;text-align:center}
+  .de-count{font-size:var(--fs-sm);font-weight:700;color:var(--ink-soft);min-width:64px;text-align:center}
 
   /* title picker */
   .title-opt{
@@ -388,7 +455,7 @@
   }
   .lvl-overlay.show .lvl-word{animation:glitch 1.4s infinite}
   .lvl-nums{
-    font-family:var(--font-head);font-weight:700;font-size:1.2rem;color:var(--gold);
+    font-family:var(--font-head);font-weight:700;font-size:var(--fs-xl);color:var(--gold);
     text-align:center;margin-top:14px;letter-spacing:.2em;text-shadow:0 0 14px rgba(245,197,66,.6);
   }
   @keyframes glitch{
@@ -401,9 +468,10 @@
   /* ============ banners ============ */
   .warn-banner{
     position:fixed;top:0;left:0;right:0;z-index:80;display:none;
-    align-items:center;gap:12px;justify-content:center;padding:13px 44px 13px 16px;
+    align-items:center;gap:12px;justify-content:center;
+    padding:calc(13px + env(safe-area-inset-top)) 44px 13px 16px;
     background:rgba(40,4,10,.92);border-bottom:1px solid var(--danger);
-    color:#ffb3ba;font-weight:700;letter-spacing:.05em;font-size:.85rem;
+    color:#ffb3ba;font-weight:700;letter-spacing:.05em;font-size:var(--fs-base);
     box-shadow:0 0 26px rgba(255,59,78,.4);animation:pulse 1.6s infinite;
   }
   .warn-banner.show{display:flex}
@@ -412,19 +480,19 @@
     position:absolute;right:10px;border:0;background:transparent;color:#ffb3ba;
     font-size:1rem;cursor:pointer;padding:6px;
   }
-  .alert-stack{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:85;width:min(92vw,480px);display:flex;flex-direction:column;gap:8px}
+  .alert-stack{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:85;width:min(92vw,480px);display:flex;flex-direction:column;gap:8px}
   .sys-alert{
     border:1px solid var(--line);background:rgba(9,18,38,.95);border-radius:9px;
-    padding:12px 16px;font-weight:600;font-size:.86rem;letter-spacing:.04em;
+    padding:12px 16px;font-weight:600;font-size:var(--fs-sm);letter-spacing:.04em;
     box-shadow:0 0 20px var(--sys-glow);animation:materialize .3s;
   }
-  .sys-alert b{color:var(--sys);font-family:var(--font-head);font-size:.68rem;letter-spacing:.2em;display:block;margin-bottom:3px}
+  .sys-alert b{color:var(--sys);font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);display:block;margin-bottom:3px}
 
   .toast{
-    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(90px);
+    position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(90px);
     background:rgba(9,18,38,.95);border:1px solid var(--line);color:var(--ink);
     font-weight:700;padding:12px 24px;border-radius:9px;letter-spacing:.06em;
-    box-shadow:0 0 22px var(--sys-glow);z-index:88;font-size:.88rem;
+    box-shadow:0 0 22px var(--sys-glow);z-index:88;font-size:var(--fs-base);
     transition:transform .35s cubic-bezier(.22,1.4,.36,1);white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis;
   }
   .toast.show{transform:translateX(-50%) translateY(0)}
@@ -449,8 +517,10 @@
     padding:7px 2px;border:1px solid var(--line-dim);border-radius:8px;background:rgba(0,0,0,.25);
   }
   .stat-cell svg{width:16px;height:16px;filter:drop-shadow(0 0 3px currentColor)}
-  .stat-cell b{font-family:var(--font-head);font-size:.82rem;color:var(--ink)}
-  .stat-cell span{font-size:.52rem;letter-spacing:.16em;color:var(--ink-soft);font-family:var(--font-head);font-weight:700}
+  /* 22px, down from 28: at 28 the number overpowered its own label and made the
+     whole cell read as oversized. The label stays at the 13px floor. */
+  .stat-cell b{font-family:var(--font-head);font-size:var(--fs-xl);color:var(--ink)}
+  .stat-cell span{font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);font-family:var(--font-body);font-weight:700}
   .stat-picker{display:flex;gap:8px}
   .stat-opt{
     flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -458,7 +528,7 @@
     background:rgba(219,233,255,.05);cursor:pointer;transition:all .15s;
   }
   .stat-opt svg{width:20px;height:20px}
-  .stat-opt span{font-family:var(--font-head);font-size:.58rem;letter-spacing:.12em;font-weight:700;color:var(--ink-soft)}
+  .stat-opt span{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;color:var(--ink-soft)}
   .stat-opt.sel{
     border-color:currentColor;background:rgba(74,168,255,.12);
     box-shadow:0 0 10px currentColor;transform:scale(1.05);
@@ -480,29 +550,31 @@
   }
   .amount-input::-webkit-outer-spin-button,.amount-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .amount-input:focus{border-color:var(--sys);box-shadow:0 0 8px var(--sys-glow)}
-  .amount-unit{font-size:.72rem;color:var(--ink-soft);font-weight:700}
+  .amount-unit{font-size:var(--fs-xs);color:var(--ink-soft);font-weight:700}
 
   /* ============ daily side quests ============ */
   .daily-btn{
     border:0;background:transparent;color:var(--ink-soft);font-size:1.1rem;
     cursor:pointer;padding:6px;border-radius:8px;line-height:1;flex-shrink:0;
   }
-  .daily-btn.on{color:var(--sys);text-shadow:0 0 8px var(--sys-glow)}
+  .daily-btn.on{color:var(--sys);text-shadow:0 0 4px var(--sys-glow)}
   .daily-tag{
-    font-family:var(--font-head);font-size:.5rem;letter-spacing:.18em;color:var(--sys);
+    font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--sys);
     border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:7px;
     vertical-align:1.5px;white-space:nowrap;
   }
 
   /* ============ streak tiers ============ */
-  .streak-hot.s2{color:#ffb347;text-shadow:0 0 10px rgba(255,179,71,.6)}
-  .streak-hot.s3{color:#ff5c3b;text-shadow:0 0 12px rgba(255,92,59,.75);font-weight:700}
+  .streak-hot.s2{color:#ffb347;text-shadow:0 0 5px rgba(255,179,71,.6)}
+  .streak-hot.s3{color:#ff5c3b;text-shadow:0 0 6px rgba(255,92,59,.75);font-weight:700}
 
   /* ============ dates ============ */
-  .head-date{font-size:.66rem;color:var(--ink-soft);letter-spacing:.14em;margin-left:8px}
-  .day-num{font-size:.6rem;color:var(--ink-soft);font-weight:600;margin-top:-3px}
+  /* inherits Orbitron from .section-head h2 — evict it explicitly */
+  /* inherits Orbitron from .section-head h2 — evict it explicitly */
+  .head-date{font-size:var(--fs-xs);color:var(--ink-soft);letter-spacing:var(--tr-caps-sm);font-family:var(--font-body);font-weight:600;white-space:nowrap}
+  .day-num{font-size:var(--fs-xs);color:var(--ink-soft);font-weight:600;margin-top:-3px}
   .week-range{
-    font-family:var(--font-head);font-size:.7rem;font-weight:700;letter-spacing:.18em;
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);
     color:var(--ink-soft);margin:2px 2px 12px;text-align:right;
   }
 
@@ -523,17 +595,17 @@
 
   /* ============ settings hub ============ */
   .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .set-name{font-family:var(--font-head);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.95rem}
-  .set-note-inline{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+  .set-name{font-family:var(--font-head);font-weight:700;letter-spacing:var(--tr-caps-lg);text-transform:uppercase;font-size:var(--fs-base)}
+  .set-note-inline{font-size:var(--fs-sm);color:var(--ink-soft);font-weight:600}
   .set-grid{display:flex;gap:10px}
   .set-grid .pill-btn{flex:1;padding:12px 0}
-  .pill-btn.small{padding:8px 14px;font-size:.74rem}
+  .pill-btn.small{padding:8px 14px;font-size:var(--fs-sm)}
   .danger-btn.wide{width:100%}
 
   /* ============ stat radar ============ */
   .radar-toggle{
     width:100%;margin-top:10px;background:transparent;border:0;cursor:pointer;
-    font-family:var(--font-head);font-size:.6rem;font-weight:700;letter-spacing:.28em;
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);
     color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:7px;padding:6px 0;
   }
   .radar-toggle:hover{color:var(--sys)}
@@ -548,20 +620,20 @@
   }
 
   /* ============ achievements gallery ============ */
-  .gal-sub{font-family:var(--font-head);font-size:.62rem;font-weight:700;letter-spacing:.22em;color:var(--ink-soft);margin:16px 0 10px}
+  .gal-sub{font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);margin:16px 0 10px}
   .title-opt{position:relative}
   .title-opt .t-name{display:block}
-  .title-opt .t-desc{display:block;font-size:.74rem;color:var(--ink-soft);margin-top:3px;letter-spacing:.03em}
+  .title-opt .t-desc{display:block;font-size:var(--fs-sm);color:var(--ink-soft);margin-top:3px;letter-spacing:.03em}
   .title-opt .t-worn{
     position:absolute;top:10px;right:12px;
-    font-family:var(--font-head);font-size:.52rem;font-weight:700;letter-spacing:.16em;
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);
     color:var(--gold);border:1px solid rgba(245,197,66,.4);border-radius:4px;padding:1px 6px;
   }
 
   /* ============ year heatmap ============ */
   .year-scroll{overflow-x:auto;padding:16px 14px}
   .yg-labels{display:flex;gap:2px;margin-bottom:5px}
-  .yg-labels span{flex:0 0 8px;width:8px;font-family:var(--font-head);font-size:.48rem;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:visible;letter-spacing:.05em}
+  .yg-labels span{flex:0 0 8px;width:8px;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:visible;letter-spacing:var(--tr-caps-sm)}
   .yg-cols{display:flex;gap:2px}
   .yg-col{display:flex;flex-direction:column;gap:2px}
   .yg-cell{display:block;width:8px;height:8px;border-radius:2px;background:rgba(74,168,255,.05)}
@@ -570,18 +642,18 @@
   /* ============ daily / side segments ============ */
   .seg-row{display:flex;gap:6px;padding:5px;margin-top:16px}
   .seg{
-    flex:1;border:0;background:transparent;font-family:var(--font-head);font-size:.68rem;
+    flex:1;border:0;background:transparent;font-family:var(--font-body);font-size:var(--fs-xs);
     font-weight:700;letter-spacing:.14em;padding:10px 0;border-radius:7px;
     color:var(--ink-soft);cursor:pointer;transition:all .2s;
     display:flex;align-items:center;justify-content:center;gap:7px;
   }
   .seg.active{
     background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
-    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 4px var(--sys);
     box-shadow:0 0 14px var(--sys-glow);
   }
   .seg-count{
-    font-family:var(--font-body);font-size:.7rem;font-weight:700;line-height:1;
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;line-height:1;
     background:var(--violet);color:#fff;border-radius:9px;padding:2px 7px;
     box-shadow:0 0 8px rgba(139,92,246,.6);
   }
@@ -596,15 +668,15 @@
   .raid-panel.slain{border-color:rgba(245,197,66,.45);box-shadow:0 0 18px rgba(245,197,66,.2), inset 0 0 24px rgba(245,197,66,.06)}
   .raid-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .raid-tag{
-    font-family:var(--font-head);font-size:.62rem;letter-spacing:.3em;font-weight:700;
-    color:#ff7a5c;text-shadow:0 0 8px rgba(255,92,59,.5);
+    font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;
+    color:#ff7a5c;text-shadow:0 0 4px rgba(255,92,59,.5);
   }
-  .raid-panel.slain .raid-tag{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.5)}
-  .raid-days{font-family:var(--font-head);font-size:.6rem;letter-spacing:.15em;color:var(--ink-soft);font-weight:700}
-  .enrage-tag{color:var(--danger);text-shadow:0 0 8px rgba(255,59,78,.7);animation:pulse 1.6s infinite}
+  .raid-panel.slain .raid-tag{color:var(--gold);text-shadow:0 0 4px rgba(245,197,66,.5)}
+  .raid-days{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);font-weight:700}
+  .enrage-tag{color:var(--danger);text-shadow:0 0 4px rgba(255,59,78,.7);animation:pulse 1.6s infinite}
   .raid-name{
-    font-family:var(--font-head);font-weight:900;font-size:.92rem;letter-spacing:.08em;
-    margin-bottom:8px;text-shadow:0 0 10px rgba(255,122,92,.35);
+    font-family:var(--font-head);font-weight:900;font-size:var(--fs-lg);letter-spacing:var(--tr-caps-lg);
+    margin-bottom:8px;text-shadow:0 0 5px rgba(255,122,92,.35);
   }
   .hp-bar{
     height:9px;border:1px solid rgba(255,92,74,.4);border-radius:5px;
@@ -615,7 +687,7 @@
     background:linear-gradient(90deg,#ff5c3b,#f5c542);
     box-shadow:0 0 10px rgba(255,92,59,.5);
   }
-  .raid-sub{font-size:.74rem;color:var(--ink-soft);font-weight:700;letter-spacing:.08em;margin-top:6px;font-family:var(--font-head)}
+  .raid-sub{font-size:var(--fs-sm);color:var(--ink-soft);font-weight:700;letter-spacing:var(--tr-caps-sm);margin-top:6px;font-family:var(--font-body)}
 
   /* ============ rune collection ============ */
   .rune-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
@@ -625,16 +697,16 @@
     padding:10px 4px;
   }
   .rune-cell svg{width:20px;height:20px;filter:drop-shadow(0 0 4px currentColor)}
-  .rune-cell span{font-family:var(--font-head);font-size:.56rem;letter-spacing:.1em;font-weight:700;color:var(--ink)}
+  .rune-cell span{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;color:var(--ink)}
   .rune-cell.dormant{opacity:.35;filter:grayscale(.7)}
 
   /* ============ quest mastery rank badge ============ */
   .m-rank{
-    font-family:var(--font-head);font-size:.6rem;font-weight:900;
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:900;
     border:1px solid currentColor;border-radius:5px;padding:1px 5px;margin-left:7px;
-    text-shadow:0 0 6px currentColor;vertical-align:1.5px;
+    text-shadow:0 0 4px currentColor;vertical-align:1.5px;
   }
-  .week-bit{font-size:.72rem;color:var(--ink-soft);font-weight:700}
+  .week-bit{font-size:var(--fs-xs);color:var(--ink-soft);font-weight:700}
 
   /* ============ side quest editor ============ */
   .sheet textarea{
@@ -647,12 +719,12 @@
     flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
     padding:10px 4px;border-radius:9px;border:1px solid var(--line-dim);
     background:rgba(219,233,255,.05);cursor:pointer;transition:all .15s;
-    font-family:var(--font-head);font-size:.62rem;letter-spacing:.12em;font-weight:700;color:var(--ink-soft);
+    font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;color:var(--ink-soft);
   }
-  .diff-opt span{font-family:var(--font-body);font-size:.7rem;color:var(--ink-soft)}
+  .diff-opt span{font-family:var(--font-body);font-size:var(--fs-xs);color:var(--ink-soft)}
   .diff-opt.sel{border-color:var(--sys);background:rgba(74,168,255,.15);box-shadow:0 0 10px var(--sys-glow);color:var(--ink)}
   .diff-tag{
-    font-family:var(--font-head);font-size:.5rem;letter-spacing:.1em;font-weight:700;
+    font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;
     border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:7px;vertical-align:1.5px;white-space:nowrap;
   }
   .diff-tag.normal{color:#34d399;border-color:rgba(52,211,153,.4)}
@@ -670,9 +742,9 @@
   .drag-live li.sortable{animation:none}
 
   @media (max-width:400px){
-    .stat-cell b{font-size:.74rem}
+    /* This block used to SHRINK the stat number and boss name on the smallest
+       screens — the phones that needed them largest. The scale handles it now. */
     .status-main{gap:10px}
-    .raid-name{font-size:.8rem}
   }
 
   @media (prefers-reduced-motion: reduce){
