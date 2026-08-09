@@ -41,7 +41,7 @@ function renderHeader(){
     done === 0 ? "Daily Quests have arrived. Begin when ready, Hunter." :
     `${total - done} gate${total-done>1?"s":""} remaining. Do not falter.`;
 
-  document.getElementById("muteBtn").textContent = state.player.muted ? "🔇" : "🔊";
+  renderSoundBtns();
   renderRadar();
 }
 
@@ -199,7 +199,7 @@ document.getElementById("addTodoBtn").onclick = () => openTodoSheet(null);   // 
 /* ================= daily / side segments ================= */
 document.querySelectorAll(".seg-row .seg[data-seg]").forEach(btn => {
   btn.onclick = () => {
-    buzz(6);
+    buzz(6); sfx.tap();
     document.querySelectorAll(".seg-row .seg[data-seg]").forEach(b => b.classList.toggle("active", b === btn));
     document.getElementById("seg-daily").hidden = btn.dataset.seg !== "daily";
     document.getElementById("seg-side").hidden  = btn.dataset.seg !== "side";
@@ -339,7 +339,7 @@ function makeSortable(listEl, getArr){
     listEl.classList.add("drag-live");   // kill entrance animations so inline transforms always win
     row.classList.remove("press-hold");  // drop the hold tint before any inline transform lands
     row.classList.add("dragging");
-    buzz(12);                            // the hold has taken — tell the thumb
+    buzz(12); sfx.dragLift();            // the hold has taken — tell the thumb
     try{ listEl.setPointerCapture(pointerId); }catch(_){}
   }
   listEl.addEventListener("pointerdown", e => {
@@ -368,7 +368,7 @@ function makeSortable(listEl, getArr){
     drag.mids.forEach((m,i) => { if (i !== drag.start && center > m) ni++; });
     if (ni !== drag.cur){
       drag.cur = ni;
-      buzz(8);   // slot-crossing tick
+      buzz(8); sfx.dragCross();   // slot-crossing tick
       drag.items.forEach((it,i) => {
         if (it === drag.row) return;
         let off = 0;
@@ -549,7 +549,7 @@ function applyRecView(){
   document.getElementById("recYear").hidden = recView !== "year";
 }
 document.querySelectorAll("#tab-records .seg").forEach(b => {
-  b.onclick = () => { buzz(6); recView = b.dataset.rview; localStorage.setItem("arise-records-view", recView); applyRecView(); };
+  b.onclick = () => { buzz(6); sfx.tap(); recView = b.dataset.rview; localStorage.setItem("arise-records-view", recView); applyRecView(); };
 });
 applyRecView();
 
@@ -633,7 +633,7 @@ dayOverlay.addEventListener("click", e => { if (e.target === dayOverlay){ dayOve
 /* ================= tabs ================= */
 document.querySelectorAll(".tabs button").forEach(btn => {
   btn.onclick = () => {
-    buzz(6);
+    buzz(6); sfx.tap();
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
     ["quests","week","records"].forEach(name => {
       document.getElementById("tab-"+name).hidden = name !== btn.dataset.tab;
@@ -806,10 +806,10 @@ function finishOnboarding(){
   toast(`REGISTERED — Welcome, ${state.player.name}.`);
 }
 document.getElementById("obNext").onclick = () => {
-  if (obStep < 3){ obStep++; buzz(6); renderOnboard(); } else finishOnboarding();
+  if (obStep < 3){ obStep++; buzz(6); sfx.tap(); renderOnboard(); } else finishOnboarding();
 };
 document.getElementById("obSecondary").onclick = () => {
-  obKeepStarters = false; obStep = 3; buzz(6); renderOnboard();
+  obKeepStarters = false; obStep = 3; buzz(6); sfx.tap(); renderOnboard();
 };
 document.getElementById("obNameInput").addEventListener("keydown", e => {
   if (e.key === "Enter") document.getElementById("obNext").click();
@@ -898,7 +898,7 @@ const overlayObserver = new MutationObserver(muts => {
     const isOpen = ov.classList.contains("open");
     const wasOpen = (m.oldValue || "").split(" ").includes("open");
     if (isOpen && !wasOpen){
-      buzz(6);
+      buzz(6); sfx.sheetOpen();
       sheetFocusMemo.set(ov, document.activeElement);
       updateSheetFade(ov);
       setTimeout(() => {
@@ -909,6 +909,7 @@ const overlayObserver = new MutationObserver(muts => {
         }
       }, 320);
     } else if (!isOpen && wasOpen){
+      sfx.sheetClose();
       const el = sheetFocusMemo.get(ov);
       sheetFocusMemo.delete(ov);
       if (el && el.isConnected){ try{ el.focus({preventScroll:true}); }catch(_){} }
@@ -921,10 +922,22 @@ document.querySelectorAll(".overlay").forEach(ov => {
   if (body) body.addEventListener("scroll", () => updateSheetFade(ov), {passive:true});
 });
 
-/* ================= mute ================= */
-document.getElementById("muteBtn").onclick = () => {
-  state.player.muted = !state.player.muted;
-  save(); renderHeader();
+/* ================= sound toggles =================
+   Two, not one: the interface ticks are what grate after a month, the event
+   fanfares are the reason to keep sound on at all. They age differently. */
+function renderSoundBtns(){
+  document.getElementById("sndEventsBtn").textContent = state.player.sndEvents === false ? "🔇" : "🔊";
+  document.getElementById("sndUIBtn").textContent     = state.player.sndUI     === false ? "🔇" : "🔊";
+}
+document.getElementById("sndEventsBtn").onclick = () => {
+  state.player.sndEvents = state.player.sndEvents === false;
+  save(); renderSoundBtns();
+  if (state.player.sndEvents) sfx.questClear();   // audition the tier you just enabled
+};
+document.getElementById("sndUIBtn").onclick = () => {
+  state.player.sndUI = state.player.sndUI === false;
+  save(); renderSoundBtns();
+  if (state.player.sndUI) sfx.tap();
 };
 
 /* ================= settings hub ================= */
@@ -1002,7 +1015,7 @@ let lvlTimer;
 function showLevelUp(from, to){
   document.getElementById("lvlNums").textContent = `LV.${from}  →  LV.${to}`;
   lvlOverlay.classList.add("show");
-  sfx.levelup();
+  sfx.levelUp();
   particles();
   clearTimeout(lvlTimer);
   lvlTimer = setTimeout(() => lvlOverlay.classList.remove("show"), 2400);

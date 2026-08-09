@@ -1,5 +1,16 @@
 "use strict";
-/* ================= sound (Web Audio, synthesized) ================= */
+/* ================= sound (Web Audio, synthesized) =================
+   Sound is the only feedback channel this app has: navigator.vibrate does not
+   exist in Safari on iOS and desktop has no vibration hardware, so every buzz()
+   call is a no-op on both of the devices this is used on.
+
+   Sixteen sounds in three amplitude tiers. Tier is set by loudness, not by
+   omission — routine interactions are audible texture, events are events, and
+   fanfares are rare. That ordering is what keeps a daily-use app from becoming
+   exhausting, and it is asserted in the verification suite.
+
+   Designed for a desktop with earphones, so the full range is load-bearing:
+   bossSlain leans on sub-bass deliberately. */
 const sfx = (() => {
   let ctx = null, master = null;
   function ensure(){
@@ -9,23 +20,85 @@ const sfx = (() => {
     if (ctx.state === "suspended") ctx.resume();
     return ctx;
   }
-  document.addEventListener("pointerdown", ensure, {once:true});
-  function blip(freq, type, dur, when, vol, glideTo){
-    if (state.player.muted || !ensure()) return;
-    const t0 = ctx.currentTime + (when || 0);
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t0);
-    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
-    g.gain.setValueAtTime(vol, t0);
+  // keydown as well as pointerdown: a desktop session that starts at the keyboard
+  // would otherwise stay silent until something is clicked.
+  ["pointerdown","keydown"].forEach(ev => document.addEventListener(ev, ensure, {once:true}));
+
+  /* ---- primitives ---- */
+  function tone(freq, type, dur, when, vol, glideTo, detune){
+    const c = ensure(); if (!c) return;
+    const t0 = c.currentTime + (when || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, glideTo), t0 + dur);
+    if (detune) o.detune.setValueAtTime(detune, t0);
+    const atk = Math.min(.006, dur * .25);   // a tiny attack ramp; setValueAtTime alone clicks
+    g.gain.setValueAtTime(.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + atk);
     g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
     o.connect(g); g.connect(master);
     o.start(t0); o.stop(t0 + dur + .05);
   }
+  function noise(dur, when, vol, cutoff){      // filtered noise burst — impact transients
+    const c = ensure(); if (!c) return;
+    const t0 = c.currentTime + (when || 0);
+    const n = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random()*2 - 1) * (1 - i/n);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = cutoff || 900;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur + .02);
+  }
+  /* Tier 1 answers to the UI toggle, tiers 2-3 to the events toggle. Undefined
+     reads as on, so a save written before these flags existed still makes noise. */
+  const audible = tier => tier === 1 ? state.player.sndUI !== false : state.player.sndEvents !== false;
+  const S = (tier, fn) => () => { if (audible(tier) && ensure()) fn(); };
+
   return {
-    tick:     () => blip(880, "triangle", .05, 0, .06),
-    complete: () => { buzz(15); blip(987, "sine", .09, 0, .12); blip(1319, "sine", .2, .09, .12); blip(1325, "sine", .2, .09, .05); },
-    levelup:  () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => blip(f, "sawtooth", .13, i*.11, .07)); blip(1047, "sawtooth", .55, .33, .09); blip(1052, "sine", .55, .33, .05); },
-    warn:     () => { blip(110, "sawtooth", .3, 0, .12, 95); blip(55, "sine", .3, 0, .1); blip(110, "sawtooth", .3, .42, .12, 95); blip(55, "sine", .3, .42, .1); }
+    /* ---- tier 1: texture, ~.02 peak, under 80ms ---- */
+    tap:        S(1, () => tone(1200, "triangle", .015, 0, .022)),
+    sheetOpen:  S(1, () => tone(420, "sine", .07, 0, .024, 900)),
+    sheetClose: S(1, () => tone(900, "sine", .07, 0, .020, 420)),
+    dragLift:   S(1, () => { tone(180, "sine", .06, 0, .026); noise(.03, 0, .012, 400); }),
+    dragCross:  S(1, () => tone(1600, "triangle", .01, 0, .012)),
+    uncheck:    S(1, () => tone(700, "triangle", .07, 0, .024, 350)),
+
+    /* ---- tier 2: events, ~.08 peak ---- */
+    questClear: S(2, () => { buzz(15); tone(987, "sine", .09, 0, .08); tone(1319, "sine", .2, .09, .08); tone(1325, "sine", .2, .09, .035); }),
+    sideClear:  S(2, () => { buzz(12); tone(784, "triangle", .07, 0, .06); tone(1047, "triangle", .13, .07, .055); }),
+    partial:    S(2, () => tone(880, "triangle", .05, 0, .045)),
+    titleUnlock:S(2, () => { buzz(20); [1047,1319,1568].forEach((f,i) => { tone(f, "sine", .34, i*.05, .05); tone(f, "sine", .34, i*.05, .022, 0, 7); }); }),
+    masteryUp:  S(2, () => [659,880,1175].forEach((f,i) => tone(f, "triangle", .16, i*.08, .06))),
+    weekGoal:   S(2, () => { tone(784, "sine", .1, 0, .07); tone(1175, "sine", .22, .1, .07); }),
+    reminder:   S(2, () => { tone(1319, "sine", .07, 0, .06); tone(1319, "sine", .07, .12, .06); }),
+
+    /* ---- tier 3: fanfares, ~.14 peak, rare ---- */
+    // Tier 3 levels are set so the quietest fanfare still beats the loudest
+    // tier-2 event. Peak is a function of how much overlaps, not just vol, so
+    // these were tuned against measured output rather than chosen on paper.
+    levelUp:    S(3, () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => tone(f, "sawtooth", .13, i*.11, .105)); tone(1047, "sawtooth", .55, .33, .135); tone(1052, "sine", .55, .33, .075); }),
+    // the biggest sound in the app: sub-bass impact, then a rising tail
+    bossSlain:  S(3, () => {
+                  buzz([40,60,80]);
+                  noise(.12, 0, .17, 300);
+                  tone(55, "sine", .5, 0, .18);
+                  tone(82, "sine", .45, .02, .12);
+                  tone(220, "sawtooth", .5, .12, .09, 880);
+                  tone(1047, "sine", .5, .3, .075);
+                  tone(1568, "sine", .45, .38, .055);
+                }),
+    perfectDay: S(3, () => { buzz([20,30,40]); [784,988,1175,1568,2093].forEach((f,i) => tone(f, "sine", .3, i*.07, .12)); }),
+    warn:       S(3, () => { tone(110, "sawtooth", .3, 0, .12, 95); tone(55, "sine", .3, 0, .1); tone(110, "sawtooth", .3, .42, .12, 95); tone(55, "sine", .3, .42, .1); }),
+
+    /* Verification hook. The tier ordering and the sub-bass in bossSlain are
+       claims about real output, so the suite taps this bus and measures the
+       actual signal rather than re-implementing the sounds against a mock. */
+    _bus: () => { const c = ensure(); return c ? { ctx: c, master } : null; }
   };
 })();
 
@@ -51,33 +124,34 @@ function setProgress(q, dateKey, value){
       const rBonus = runeBonusXP();                 // after-mutation: a reactivating clear counts itself
       const xp = BASE_XP + sBonus + mastery.bonus + rBonus;
       led[q.id] = xp; grantXP(xp);
-      sfx.complete();
+      sfx.questClear();
       toast(st.n > 1
         ? `QUEST CLEAR — +${xp} EXP (🔥${st.n}${st.weekly ? "w" : "d"} +${sBonus})`
         : `QUEST CLEAR — +${xp} EXP`);
       if (masteryFromClears(lifetimeClears(q) - 1).name !== mastery.name){
-        sfx.levelup();
+        sfx.masteryUp();
         setTimeout(() => toast(`QUEST RANK UP — ${q.name} reaches ${mastery.name}-RANK`), 1700);
       }
       if (!wasSatisfied && weekSatisfied(q, dateKey)){
+        sfx.weekGoal();
         sysAlert(`Weekly goal met — ${q.name} (${freqOf(q)}/${freqOf(q)}). Gate exempt for the rest of the week.`);
       }
       if (!wasAll && allDone(t)){
         led._perfect = PERFECT_XP; grantXP(PERFECT_XP);
-        particles();
+        sfx.perfectDay(); particles();
         setTimeout(() => toast(`ALL GATES CLEARED — +${PERFECT_XP} BONUS EXP`), 900);
       }
       const raidNow = currentRaid();
       if (raidNow && raidNow.killed && !(raidBefore && raidBefore.killed)){
-        sfx.levelup(); particles();
+        sfx.bossSlain(); particles();
         sysAlert(`GATE BOSS SLAIN — ${raidNow.boss} falls! ${raidNow.rune.name} acquired.`);
       }
     } else if (wasDone && !nowDone){
-      buzz(8);
+      buzz(8); sfx.uncheck();
       if (led[q.id]){ revokeXP(led[q.id]); delete led[q.id]; }
       if (led._perfect && !allDone(t)){ revokeXP(led._perfect); delete led._perfect; }
     } else if (value > 0){
-      sfx.tick();
+      sfx.partial();
     }
   }
   checkTitles(false);
@@ -99,12 +173,12 @@ function toggleTodo(td){
     if (eligible){
       const xp = diffXP(td);
       led[key] = xp; grantXP(xp); td.rewardedOn = t;
-      sfx.complete(); toast(`SIDE QUEST CLEAR — +${xp} EXP`);
+      sfx.sideClear(); toast(`SIDE QUEST CLEAR — +${xp} EXP`);
     } else {
-      sfx.tick();
+      sfx.partial();
     }
   } else {
-    buzz(8);
+    buzz(8); sfx.uncheck();
     const doneToday = td.doneOn === t;
     td.done = false; td.doneOn = null;
     // refund only same-day completions — retro edits never change EXP
