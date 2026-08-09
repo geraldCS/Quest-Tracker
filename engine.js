@@ -60,40 +60,44 @@ const sfx = (() => {
   const S = (tier, fn) => () => { if (audible(tier) && ensure()) fn(); };
 
   return {
-    /* ---- tier 1: texture, ~.02 peak, under 80ms ---- */
-    tap:        S(1, () => tone(1200, "triangle", .015, 0, .022)),
-    sheetOpen:  S(1, () => tone(420, "sine", .07, 0, .024, 900)),
-    sheetClose: S(1, () => tone(900, "sine", .07, 0, .020, 420)),
-    dragLift:   S(1, () => { tone(180, "sine", .06, 0, .026); noise(.03, 0, .012, 400); }),
-    dragCross:  S(1, () => tone(1600, "triangle", .01, 0, .012)),
-    uncheck:    S(1, () => tone(700, "triangle", .07, 0, .024, 350)),
+    /* ---- tier 1: texture, but audible ----
+       The first cut sat near -40 dBFS at 10-15ms and could not be heard at all.
+       Perceived loudness integrates over ~100-200ms, so a very short click needs
+       far more amplitude than its peak suggests to register. These are both
+       louder and longer; still the quietest things in the app, but present. */
+    tap:        S(1, () => tone(1200, "triangle", .035, 0, .055)),
+    sheetOpen:  S(1, () => tone(420, "sine", .09, 0, .055, 900)),
+    sheetClose: S(1, () => tone(900, "sine", .09, 0, .050, 420)),
+    dragLift:   S(1, () => { tone(180, "sine", .07, 0, .060); noise(.035, 0, .030, 400); }),
+    dragCross:  S(1, () => tone(1600, "triangle", .018, 0, .030)),   // fires repeatedly mid-drag: shortest
+    uncheck:    S(1, () => tone(700, "triangle", .08, 0, .055, 350)),
 
     /* ---- tier 2: events, ~.08 peak ---- */
-    questClear: S(2, () => { buzz(15); tone(987, "sine", .09, 0, .08); tone(1319, "sine", .2, .09, .08); tone(1325, "sine", .2, .09, .035); }),
-    sideClear:  S(2, () => { buzz(12); tone(784, "triangle", .07, 0, .06); tone(1047, "triangle", .13, .07, .055); }),
-    partial:    S(2, () => tone(880, "triangle", .05, 0, .045)),
-    titleUnlock:S(2, () => { buzz(20); [1047,1319,1568].forEach((f,i) => { tone(f, "sine", .34, i*.05, .05); tone(f, "sine", .34, i*.05, .022, 0, 7); }); }),
-    masteryUp:  S(2, () => [659,880,1175].forEach((f,i) => tone(f, "triangle", .16, i*.08, .06))),
-    weekGoal:   S(2, () => { tone(784, "sine", .1, 0, .07); tone(1175, "sine", .22, .1, .07); }),
-    reminder:   S(2, () => { tone(1319, "sine", .07, 0, .06); tone(1319, "sine", .07, .12, .06); }),
+    questClear: S(2, () => { buzz(15); tone(987, "sine", .09, 0, .105); tone(1319, "sine", .2, .09, .105); tone(1325, "sine", .2, .09, .045); }),
+    sideClear:  S(2, () => { buzz(12); tone(784, "triangle", .07, 0, .080); tone(1047, "triangle", .13, .07, .072); }),
+    partial:    S(2, () => tone(880, "triangle", .07, 0, .080)),
+    titleUnlock:S(2, () => { buzz(20); [1047,1319,1568].forEach((f,i) => { tone(f, "sine", .34, i*.05, .065); tone(f, "sine", .34, i*.05, .029, 0, 7); }); }),
+    masteryUp:  S(2, () => [659,880,1175].forEach((f,i) => tone(f, "triangle", .16, i*.08, .078))),
+    weekGoal:   S(2, () => { tone(784, "sine", .1, 0, .092); tone(1175, "sine", .22, .1, .092); }),
+    reminder:   S(2, () => { tone(1319, "sine", .07, 0, .078); tone(1319, "sine", .07, .12, .078); }),
 
     /* ---- tier 3: fanfares, ~.14 peak, rare ---- */
     // Tier 3 levels are set so the quietest fanfare still beats the loudest
     // tier-2 event. Peak is a function of how much overlaps, not just vol, so
     // these were tuned against measured output rather than chosen on paper.
-    levelUp:    S(3, () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => tone(f, "sawtooth", .13, i*.11, .105)); tone(1047, "sawtooth", .55, .33, .135); tone(1052, "sine", .55, .33, .075); }),
+    levelUp:    S(3, () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => tone(f, "sawtooth", .13, i*.11, .140)); tone(1047, "sawtooth", .55, .33, .180); tone(1052, "sine", .55, .33, .100); }),
     // the biggest sound in the app: sub-bass impact, then a rising tail
     bossSlain:  S(3, () => {
                   buzz([40,60,80]);
-                  noise(.12, 0, .17, 300);
-                  tone(55, "sine", .5, 0, .18);
-                  tone(82, "sine", .45, .02, .12);
-                  tone(220, "sawtooth", .5, .12, .09, 880);
-                  tone(1047, "sine", .5, .3, .075);
-                  tone(1568, "sine", .45, .38, .055);
+                  noise(.12, 0, .225, 300);
+                  tone(55, "sine", .5, 0, .240);
+                  tone(82, "sine", .45, .02, .160);
+                  tone(220, "sawtooth", .5, .12, .120, 880);
+                  tone(1047, "sine", .5, .3, .100);
+                  tone(1568, "sine", .45, .38, .073);
                 }),
-    perfectDay: S(3, () => { buzz([20,30,40]); [784,988,1175,1568,2093].forEach((f,i) => tone(f, "sine", .3, i*.07, .12)); }),
-    warn:       S(3, () => { tone(110, "sawtooth", .3, 0, .12, 95); tone(55, "sine", .3, 0, .1); tone(110, "sawtooth", .3, .42, .12, 95); tone(55, "sine", .3, .42, .1); }),
+    perfectDay: S(3, () => { buzz([20,30,40]); [784,988,1175,1568,2093].forEach((f,i) => tone(f, "sine", .3, i*.07, .160)); }),
+    warn:       S(3, () => { tone(110, "sawtooth", .3, 0, .150, 95); tone(55, "sine", .3, 0, .125); tone(110, "sawtooth", .3, .42, .150, 95); tone(55, "sine", .3, .42, .125); }),
 
     /* Verification hook. The tier ordering and the sub-bass in bossSlain are
        claims about real output, so the suite taps this bus and measures the
