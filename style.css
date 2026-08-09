@@ -67,6 +67,12 @@
     font-family:var(--font-body);
     background:radial-gradient(ellipse at 50% -10%, #0b1430 0%, var(--bg) 55%) fixed, var(--bg);
     color:var(--ink);min-height:100vh;overflow-x:hidden;letter-spacing:.02em;
+    /* Light text on a near-black background: Apple's default subpixel
+       antialiasing thickens and softens the letterforms. Grayscale AA renders
+       them noticeably crisper, which is most of what "sharper" means here. */
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
   }
   .scanlines{
     position:fixed;inset:0;pointer-events:none;z-index:1;
@@ -108,7 +114,7 @@
   .status-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   .sys-tag{
     font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--sys);
-    text-shadow:0 0 8px var(--sys-glow);font-weight:700;
+    text-shadow:0 0 4px var(--sys-glow);font-weight:700;
   }
   .icon-btn{
     border:1px solid var(--line);background:transparent;color:var(--ink-soft);
@@ -131,12 +137,12 @@
   .rank-badge{
     font-family:var(--font-head);font-weight:900;font-size:var(--fs-lg);
     border:1px solid currentColor;border-radius:6px;padding:2px 8px;
-    text-shadow:0 0 8px currentColor;
+    text-shadow:0 0 4px currentColor;
   }
   .title-line{
     border:0;background:transparent;color:var(--gold);font-family:var(--font-body);
     font-weight:600;font-size:var(--fs-base);cursor:pointer;padding:2px 0;letter-spacing:.06em;
-    text-shadow:0 0 10px rgba(245,197,66,.4);display:block;
+    text-shadow:0 0 5px rgba(245,197,66,.4);display:block;
   }
   .title-line:disabled{color:var(--ink-soft);text-shadow:none;cursor:default}
   .exp-bar{
@@ -169,15 +175,20 @@
   }
   .tabs button.active{
     background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
-    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 4px var(--sys);
     box-shadow:0 0 14px var(--sys-glow);
   }
 
   /* ============ sections ============ */
-  .section-head{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
+  .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 2px 10px}
+  /* The date used to sit inline inside the h2. At 18px headings it no longer fit
+     beside the action button on a 375px screen, so it wrapped to a second line
+     indented under the title and looked like a bug. It is a deliberate subtitle
+     now, and the title itself never wraps. */
+  .head-titles{display:flex;flex-direction:column;gap:1px;min-width:0}
   .section-head h2{
     font-family:var(--font-head);font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--tr-caps-lg);
-    color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
+    color:var(--sys);text-shadow:0 0 4px var(--sys-glow);white-space:nowrap;
   }
   .pill-btn{
     border:1px solid var(--line);background:linear-gradient(135deg,rgba(74,168,255,.2),rgba(139,92,246,.2));
@@ -228,8 +239,8 @@
     background:rgba(219,233,255,.09);border-radius:6px;padding:1px 4px;margin-right:4px;
   }
   .quest-meta{font-size:var(--fs-xs);color:var(--ink-soft);margin-top:2px;font-weight:600;letter-spacing:.04em}
-  .streak-hot{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.35)}
-  .clear-tag{color:var(--sys);font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);text-shadow:0 0 8px var(--sys-glow)}
+  .streak-hot{color:var(--gold);text-shadow:0 0 4px rgba(245,197,66,.35)}
+  .clear-tag{color:var(--sys);font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);text-shadow:0 0 4px var(--sys-glow)}
   .q-progress{display:flex;align-items:center;gap:8px;margin-top:6px}
   .q-bar{flex:1;height:7px;border:1px solid var(--line-dim);border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden}
   .q-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--hc,var(--sys)),var(--violet));box-shadow:0 0 8px var(--hc,var(--sys));transition:width .3s;border-radius:3px}
@@ -361,7 +372,7 @@
   }
   .sheet h3{
     font-family:var(--font-head);font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--tr-caps-lg);
-    margin-bottom:16px;color:var(--sys);text-shadow:0 0 10px var(--sys-glow);
+    margin-bottom:16px;color:var(--sys);text-shadow:0 0 5px var(--sys-glow);
   }
   .sheet label{display:block;font-size:var(--fs-xs);font-weight:700;color:var(--ink-soft);margin:14px 0 7px;text-transform:uppercase;letter-spacing:var(--tr-caps-sm);font-family:var(--font-body)}
   .sheet input[type=text],.sheet input[type=number],.sheet input[type=time],.sheet input[type=password],.sheet select{
@@ -506,7 +517,9 @@
     padding:7px 2px;border:1px solid var(--line-dim);border-radius:8px;background:rgba(0,0,0,.25);
   }
   .stat-cell svg{width:16px;height:16px;filter:drop-shadow(0 0 3px currentColor)}
-  .stat-cell b{font-family:var(--font-head);font-size:var(--fs-2xl);color:var(--ink)}
+  /* 22px, down from 28: at 28 the number overpowered its own label and made the
+     whole cell read as oversized. The label stays at the 13px floor. */
+  .stat-cell b{font-family:var(--font-head);font-size:var(--fs-xl);color:var(--ink)}
   .stat-cell span{font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);font-family:var(--font-body);font-weight:700}
   .stat-picker{display:flex;gap:8px}
   .stat-opt{
@@ -544,7 +557,7 @@
     border:0;background:transparent;color:var(--ink-soft);font-size:1.1rem;
     cursor:pointer;padding:6px;border-radius:8px;line-height:1;flex-shrink:0;
   }
-  .daily-btn.on{color:var(--sys);text-shadow:0 0 8px var(--sys-glow)}
+  .daily-btn.on{color:var(--sys);text-shadow:0 0 4px var(--sys-glow)}
   .daily-tag{
     font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--sys);
     border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:7px;
@@ -552,12 +565,13 @@
   }
 
   /* ============ streak tiers ============ */
-  .streak-hot.s2{color:#ffb347;text-shadow:0 0 10px rgba(255,179,71,.6)}
-  .streak-hot.s3{color:#ff5c3b;text-shadow:0 0 12px rgba(255,92,59,.75);font-weight:700}
+  .streak-hot.s2{color:#ffb347;text-shadow:0 0 5px rgba(255,179,71,.6)}
+  .streak-hot.s3{color:#ff5c3b;text-shadow:0 0 6px rgba(255,92,59,.75);font-weight:700}
 
   /* ============ dates ============ */
   /* inherits Orbitron from .section-head h2 — evict it explicitly */
-  .head-date{font-size:var(--fs-xs);color:var(--ink-soft);letter-spacing:var(--tr-caps-sm);margin-left:8px;font-family:var(--font-body)}
+  /* inherits Orbitron from .section-head h2 — evict it explicitly */
+  .head-date{font-size:var(--fs-xs);color:var(--ink-soft);letter-spacing:var(--tr-caps-sm);font-family:var(--font-body);font-weight:600;white-space:nowrap}
   .day-num{font-size:var(--fs-xs);color:var(--ink-soft);font-weight:600;margin-top:-3px}
   .week-range{
     font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);
@@ -635,7 +649,7 @@
   }
   .seg.active{
     background:linear-gradient(135deg,rgba(74,168,255,.25),rgba(139,92,246,.25));
-    color:#fff;border:1px solid var(--line);text-shadow:0 0 8px var(--sys);
+    color:#fff;border:1px solid var(--line);text-shadow:0 0 4px var(--sys);
     box-shadow:0 0 14px var(--sys-glow);
   }
   .seg-count{
@@ -655,14 +669,14 @@
   .raid-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .raid-tag{
     font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);font-weight:700;
-    color:#ff7a5c;text-shadow:0 0 8px rgba(255,92,59,.5);
+    color:#ff7a5c;text-shadow:0 0 4px rgba(255,92,59,.5);
   }
-  .raid-panel.slain .raid-tag{color:var(--gold);text-shadow:0 0 8px rgba(245,197,66,.5)}
+  .raid-panel.slain .raid-tag{color:var(--gold);text-shadow:0 0 4px rgba(245,197,66,.5)}
   .raid-days{font-family:var(--font-body);font-size:var(--fs-xs);letter-spacing:var(--tr-caps-sm);color:var(--ink-soft);font-weight:700}
-  .enrage-tag{color:var(--danger);text-shadow:0 0 8px rgba(255,59,78,.7);animation:pulse 1.6s infinite}
+  .enrage-tag{color:var(--danger);text-shadow:0 0 4px rgba(255,59,78,.7);animation:pulse 1.6s infinite}
   .raid-name{
     font-family:var(--font-head);font-weight:900;font-size:var(--fs-lg);letter-spacing:var(--tr-caps-lg);
-    margin-bottom:8px;text-shadow:0 0 10px rgba(255,122,92,.35);
+    margin-bottom:8px;text-shadow:0 0 5px rgba(255,122,92,.35);
   }
   .hp-bar{
     height:9px;border:1px solid rgba(255,92,74,.4);border-radius:5px;
@@ -690,7 +704,7 @@
   .m-rank{
     font-family:var(--font-body);font-size:var(--fs-xs);font-weight:900;
     border:1px solid currentColor;border-radius:5px;padding:1px 5px;margin-left:7px;
-    text-shadow:0 0 6px currentColor;vertical-align:1.5px;
+    text-shadow:0 0 4px currentColor;vertical-align:1.5px;
   }
   .week-bit{font-size:var(--fs-xs);color:var(--ink-soft);font-weight:700}
 
