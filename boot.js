@@ -37,7 +37,7 @@ function systemTick(){
     if (q.reminder && hm >= q.reminder && !isDone(q,t) && !weekSatisfied(q,t) && state.meta.remindersFired[q.id] !== t){
       state.meta.remindersFired[q.id] = t; dirty = true;
       sysAlert(`Quest available: ${q.name}${q.target?` — ${targetOf(q)} ${unitOf(q)}`:""}`);
-      sfx.complete();
+      sfx.reminder();
       if ("Notification" in window && Notification.permission === "granted"){
         try{ new Notification("[SYSTEM] Daily Quest", { body:`${q.name} awaits completion, Hunter.` }); }catch(_){}
       }

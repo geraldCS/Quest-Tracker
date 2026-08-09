@@ -98,7 +98,8 @@ function memo(key, fn){
 function baseState(){
   return {
     version: 2,
-    player: { name:null, exp:0, title:null, titles:[], muted:false, seenLevel:1, radarOpen:true, onboarded:false },
+    player: { name:null, exp:0, title:null, titles:[], seenLevel:1, radarOpen:true, onboarded:false,
+              sndUI:true, sndEvents:true },
     quests: [], todos: [],
     meta: { xpLedger:{}, remindersFired:{}, warnedOn:null, deleted:{}, lastExport:null }
   };
@@ -119,9 +120,14 @@ function normalize(st){
   // a save written before onboarding existed has no flag — infer it from the name,
   // so returning players are never shown the first-run flow
   const hadOnboarded = !!(st.player && "onboarded" in st.player);
+  // one mute flag became two (UI texture vs events) — carry the old choice across
+  const legacyMuted = st.player && !("sndUI" in st.player) && "muted" in st.player
+    ? !!st.player.muted : null;
   st.player = Object.assign(base.player, st.player || {});
   st.meta   = Object.assign(base.meta,   st.meta   || {});
   if (!hadOnboarded) st.player.onboarded = !!st.player.name;
+  if (legacyMuted !== null){ st.player.sndUI = !legacyMuted; st.player.sndEvents = !legacyMuted; }
+  delete st.player.muted;
   st.quests = (st.quests || []).map(q => {
     if (!STATS[q.stat]) q.stat = EMOJI_STAT[q.emoji] || "str";
     if (q.target && "step" in q.target) delete q.target.step;
@@ -338,7 +344,7 @@ function checkTitles(silent){
     if (!state.player.titles.includes(t.id) && t.test()){
       state.player.titles.push(t.id);
       if (!state.player.title) state.player.title = t.id;
-      if (!silent){ toast(`TITLE UNLOCKED — ${t.name}`); sfx.complete(); }
+      if (!silent){ toast(`TITLE UNLOCKED — ${t.name}`); sfx.titleUnlock(); }
     }
   });
 }
