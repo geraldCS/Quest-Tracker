@@ -4,7 +4,7 @@
    exist in Safari on iOS and desktop has no vibration hardware, so every buzz()
    call is a no-op on both of the devices this is used on.
 
-   Sixteen sounds in three amplitude tiers. Tier is set by loudness, not by
+   Seventeen sounds in three amplitude tiers. Tier is set by loudness, not by
    omission — routine interactions are audible texture, events are events, and
    fanfares are rare. That ordering is what keeps a daily-use app from becoming
    exhausting, and it is asserted in the verification suite.
@@ -12,11 +12,31 @@
    Designed for a desktop with earphones, so the full range is load-bearing:
    bossSlain leans on sub-bass deliberately. */
 const sfx = (() => {
-  let ctx = null, master = null;
+  let ctx = null, master = null, limiter = null;
   function ensure(){
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    if (!ctx){ ctx = new AC(); master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination); }
+    if (!ctx){
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 1;
+      // Brickwall-ish limiter. Mandatory at these levels, not a nicety: clearing
+      // the last quest of a perfect day fires questClear + perfectDay + bossSlain
+      // + levelUp inside a second, and that sum clips without it. The loudest
+      // single sound sits *at* the threshold, so it is transparent alone and only
+      // engages on overlap. (Chrome adds ~6ms lookahead latency — irrelevant here.)
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -3;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      // .0005, not the .003 the plan specified: at .003 the attack is slow enough
+      // that the opening transient of a four-sound overlap slips past the limiter,
+      // and the stress test measured >1.0 on 2 of 4 runs. .0005 catches it (peak
+      // .943, never clipped) and costs nothing — solo levels are identical to
+      // two decimals, so the "very loud" decision is untouched.
+      limiter.attack.value = .0005;
+      limiter.release.value = .15;
+      master.connect(limiter); limiter.connect(ctx.destination);
+    }
     if (ctx.state === "suspended") ctx.resume();
     return ctx;
   }
@@ -60,49 +80,52 @@ const sfx = (() => {
   const S = (tier, fn) => () => { if (audible(tier) && ensure()) fn(); };
 
   return {
-    /* ---- tier 1: texture, but audible ----
-       The first cut sat near -40 dBFS at 10-15ms and could not be heard at all.
-       Perceived loudness integrates over ~100-200ms, so a very short click needs
-       far more amplitude than its peak suggests to register. These are both
-       louder and longer; still the quietest things in the app, but present. */
-    tap:        S(1, () => tone(1200, "triangle", .035, 0, .055)),
-    sheetOpen:  S(1, () => tone(420, "sine", .09, 0, .055, 900)),
-    sheetClose: S(1, () => tone(900, "sine", .09, 0, .050, 420)),
-    dragLift:   S(1, () => { tone(180, "sine", .07, 0, .060); noise(.035, 0, .030, 400); }),
-    dragCross:  S(1, () => tone(1600, "triangle", .018, 0, .030)),   // fires repeatedly mid-drag: shortest
-    uncheck:    S(1, () => tone(700, "triangle", .08, 0, .055, 350)),
+    /* ---- tier 1: texture, but audible, -22.3 to -16.8 dBFS ----
+       Two earlier cuts were inaudible. Perceived loudness integrates over
+       ~100-200ms, so a very short click needs far more amplitude than its peak
+       suggests to register — peak is a poor proxy for what an ear hears. These
+       are still the quietest things in the app, but comfortably present. */
+    tap:        S(1, () => tone(1200, "triangle", .035, 0, .1507)),
+    sheetOpen:  S(1, () => tone(420, "sine", .09, 0, .1507, 900)),
+    sheetClose: S(1, () => tone(900, "sine", .09, 0, .137, 420)),
+    dragLift:   S(1, () => { tone(180, "sine", .07, 0, .1644); noise(.035, 0, .0822, 400); }),
+    dragCross:  S(1, () => tone(1600, "triangle", .018, 0, .0822)),  // fires repeatedly mid-drag: shortest and quietest
+    uncheck:    S(1, () => tone(700, "triangle", .08, 0, .1507, 350)),
 
-    /* ---- tier 2: events, ~.08 peak ---- */
-    questClear: S(2, () => { buzz(15); tone(987, "sine", .09, 0, .105); tone(1319, "sine", .2, .09, .105); tone(1325, "sine", .2, .09, .045); }),
-    sideClear:  S(2, () => { buzz(12); tone(784, "triangle", .07, 0, .080); tone(1047, "triangle", .13, .07, .072); }),
-    partial:    S(2, () => tone(880, "triangle", .07, 0, .080)),
-    titleUnlock:S(2, () => { buzz(20); [1047,1319,1568].forEach((f,i) => { tone(f, "sine", .34, i*.05, .065); tone(f, "sine", .34, i*.05, .029, 0, 7); }); }),
-    masteryUp:  S(2, () => [659,880,1175].forEach((f,i) => tone(f, "triangle", .16, i*.08, .078))),
-    weekGoal:   S(2, () => { tone(784, "sine", .1, 0, .092); tone(1175, "sine", .22, .1, .092); }),
-    reminder:   S(2, () => { tone(1319, "sine", .07, 0, .078); tone(1319, "sine", .07, .12, .078); }),
+    /* ---- tier 2: events, -13.8 to -7.9 dBFS ---- */
+    questClear: S(2, () => { buzz(15); tone(987, "sine", .09, 0, .2877); tone(1319, "sine", .2, .09, .2877); tone(1325, "sine", .2, .09, .1233); }),
+    sideClear:  S(2, () => { buzz(12); tone(784, "triangle", .07, 0, .2192); tone(1047, "triangle", .13, .07, .1973); }),
+    partial:    S(2, () => tone(880, "triangle", .07, 0, .2192)),
+    titleUnlock:S(2, () => { buzz(20); [1047,1319,1568].forEach((f,i) => { tone(f, "sine", .34, i*.05, .1781); tone(f, "sine", .34, i*.05, .0795, 0, 7); }); }),
+    masteryUp:  S(2, () => [659,880,1175].forEach((f,i) => tone(f, "triangle", .16, i*.08, .2137))),
+    weekGoal:   S(2, () => { tone(784, "sine", .1, 0, .2521); tone(1175, "sine", .22, .1, .2521); }),
+    reminder:   S(2, () => { tone(1319, "sine", .07, 0, .2137); tone(1319, "sine", .07, .12, .2137); }),
 
-    /* ---- tier 3: fanfares, ~.14 peak, rare ---- */
+    /* ---- tier 3: fanfares, -5.8 to -3.0 dBFS, rare ---- */
     // Tier 3 levels are set so the quietest fanfare still beats the loudest
     // tier-2 event. Peak is a function of how much overlaps, not just vol, so
     // these were tuned against measured output rather than chosen on paper.
-    levelUp:    S(3, () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => tone(f, "sawtooth", .13, i*.11, .140)); tone(1047, "sawtooth", .55, .33, .180); tone(1052, "sine", .55, .33, .100); }),
+    // bossSlain is the ceiling and sits on the limiter threshold by design.
+    levelUp:    S(3, () => { buzz([30,40,60]); [523,659,784].forEach((f,i) => tone(f, "sawtooth", .13, i*.11, .3836)); tone(1047, "sawtooth", .55, .33, .4932); tone(1052, "sine", .55, .33, .274); }),
     // the biggest sound in the app: sub-bass impact, then a rising tail
     bossSlain:  S(3, () => {
                   buzz([40,60,80]);
-                  noise(.12, 0, .225, 300);
-                  tone(55, "sine", .5, 0, .240);
-                  tone(82, "sine", .45, .02, .160);
-                  tone(220, "sawtooth", .5, .12, .120, 880);
-                  tone(1047, "sine", .5, .3, .100);
-                  tone(1568, "sine", .45, .38, .073);
+                  noise(.12, 0, .6165, 300);
+                  tone(55, "sine", .5, 0, .6576);
+                  tone(82, "sine", .45, .02, .4384);
+                  tone(220, "sawtooth", .5, .12, .3288, 880);
+                  tone(1047, "sine", .5, .3, .274);
+                  tone(1568, "sine", .45, .38, .2);
                 }),
-    perfectDay: S(3, () => { buzz([20,30,40]); [784,988,1175,1568,2093].forEach((f,i) => tone(f, "sine", .3, i*.07, .160)); }),
-    warn:       S(3, () => { tone(110, "sawtooth", .3, 0, .150, 95); tone(55, "sine", .3, 0, .125); tone(110, "sawtooth", .3, .42, .150, 95); tone(55, "sine", .3, .42, .125); }),
+    perfectDay: S(3, () => { buzz([20,30,40]); [784,988,1175,1568,2093].forEach((f,i) => tone(f, "sine", .3, i*.07, .4384)); }),
+    warn:       S(3, () => { tone(110, "sawtooth", .3, 0, .411, 95); tone(55, "sine", .3, 0, .3425); tone(110, "sawtooth", .3, .42, .411, 95); tone(55, "sine", .3, .42, .3425); }),
 
     /* Verification hook. The tier ordering and the sub-bass in bossSlain are
        claims about real output, so the suite taps this bus and measures the
-       actual signal rather than re-implementing the sounds against a mock. */
-    _bus: () => { const c = ensure(); return c ? { ctx: c, master } : null; }
+       actual signal rather than re-implementing the sounds against a mock.
+       `limiter` is the last node before destination — measure there, not at
+       `master`, or the stress test reads pre-limiting peaks and proves nothing. */
+    _bus: () => { const c = ensure(); return c ? { ctx: c, master, limiter } : null; }
   };
 })();
 
