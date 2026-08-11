@@ -442,6 +442,61 @@ function makeSortable(listEl, getArr){
 makeSortable(document.getElementById("questList"), () => state.quests);
 makeSortable(document.getElementById("todoList"),  () => state.todos);
 
+/* ================= week summary (the verdict) =================
+   Three visual objects, not five: a dominant badge carrying the grade and its
+   delta, the projection beneath it, and one muted row for the long-range facts.
+   Tiering them this way is the point — five equal elements would rebuild the
+   "eyeball it and decide for yourself" problem the block exists to solve. */
+function weekSummaryEl(monday, rangeFmt){
+  const info = currentWeekRank();
+  if (!info) return null;                       // no expected clears: fall through to the tab's empty state
+  const last = weekRankInfo(addDays(monday, -7));
+  const best = weekBest(), streak = bossStreak();
+  const idx = n => WEEK_RANKS.findIndex(x => x[0] === n);
+
+  let delta = "";
+  if (last){
+    const d = idx(info.grade.name) - idx(last.final.name);
+    delta = d > 0 ? `<span class="ws-delta up">↑ from ${last.final.name}</span>`
+          : d < 0 ? `<span class="ws-delta down">↓ from ${last.final.name}</span>`
+                  : `<span class="ws-delta">level with last week</span>`;
+  }
+
+  const p = info.projection;
+  const projection = !p ? ""
+    : p.kind === "secured" ? `${p.grade} secured. Anything more is spoils.`
+    : p.kind === "hold"    ? `Clear ${p.need} more to hold ${p.grade}.`
+                           : `Clear ${p.need} more to finish at ${p.grade}.`;
+
+  // Absent states carry the System's voice rather than "—", which reads as a
+  // score of zero. They share the muted row so week two swaps text instead of
+  // restructuring the block.
+  const bestTxt = best
+    ? `BEST — <b style="color:${best.grade.color}">${best.grade.name}</b> · WEEK OF ${rangeFmt(parseD(best.mondayKey))}`
+    : `No record set. This week is the first.`;
+  const streakTxt = streak > 0 ? `${streak} week${streak > 1 ? "s" : ""} unbroken`
+    : (last && !last.killed ? `Boss escaped last week` : "");
+  const rowRight = last ? streakTxt : `First week — no comparison yet, Hunter.`;
+
+  const box = document.createElement("div");
+  box.className = "week-summary panel";
+  box.style.setProperty("--wg", info.grade.color);
+  box.innerHTML = `
+    <div class="ws-head">
+      <div class="ws-badge">
+        <span class="ws-label">WEEK RANK</span>
+        <span class="ws-grade">${info.grade.name}</span>
+      </div>
+      ${delta}
+    </div>
+    ${projection ? `<div class="ws-projection">${projection}</div>` : ""}
+    <div class="ws-row">
+      <span>${bestTxt}</span>
+      ${rowRight ? `<span>${rowRight}</span>` : ""}
+    </div>`;
+  return box;
+}
+
 /* ================= week view ================= */
 function renderWeek(){
   const el = document.getElementById("tab-week");
@@ -458,6 +513,8 @@ function renderWeek(){
   range.className = "week-range";
   range.textContent = `◈ ${rangeFmt(monday)} — ${rangeFmt(sunday)}`;
   el.appendChild(range);
+  const summary = weekSummaryEl(monday, rangeFmt);
+  if (summary) el.appendChild(summary);
   state.quests.forEach(q => {
     const card = document.createElement("div");
     card.className = "week-card panel";

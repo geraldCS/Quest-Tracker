@@ -578,6 +578,40 @@
     color:var(--ink-soft);margin:2px 2px 12px;text-align:right;
   }
 
+  /* ============ week summary (the verdict) ============
+     --wg is the grade colour, shared with MASTERY and RANKS. The grade is set
+     at --fs-display so it reads as a different class of object from the small
+     .m-rank chips sitting directly beneath it on the quest cards. */
+  .week-summary{padding:14px 16px 13px;margin-bottom:14px;border-left:3px solid var(--wg)}
+  .ws-head{display:flex;align-items:center;gap:14px}
+  .ws-badge{display:flex;flex-direction:column;line-height:1}
+  .ws-label{
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;
+    letter-spacing:var(--tr-caps-lg);color:var(--wg);
+  }
+  /* White glyph, coloured halo — the same treatment .lv-num uses at this size.
+     Colouring the letter AND its glow the same hue leaves no luminance contrast,
+     and the glow floods the counters until a B reads as a solid block. */
+  .ws-grade{
+    font-family:var(--font-head);font-weight:900;font-size:var(--fs-display);line-height:1;
+    color:#fff;text-shadow:0 0 16px var(--wg),0 0 36px var(--wg);margin-top:3px;
+  }
+  .ws-delta{
+    font-family:var(--font-body);font-size:var(--fs-sm);font-weight:700;
+    letter-spacing:.04em;color:var(--ink-soft);align-self:flex-end;padding-bottom:6px;
+  }
+  .ws-delta.up{color:var(--good,#34d399)}
+  .ws-delta.down{color:var(--danger)}
+  .ws-projection{
+    font-size:var(--fs-base);font-weight:600;letter-spacing:.03em;
+    color:var(--ink);margin-top:8px;
+  }
+  .ws-row{
+    display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;
+    font-size:var(--fs-xs);font-weight:700;letter-spacing:var(--tr-caps-sm);
+    color:var(--ink-soft);margin-top:11px;
+  }
+
   /* ============ header buttons ============ */
   .top-btns{display:flex;gap:6px}
   #syncBtn.spin{color:var(--sys);animation:syncspin 1s linear infinite}
