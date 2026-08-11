@@ -304,6 +304,113 @@ function runeBonusXP(){
   return runesDormant() ? 0 : Math.min(runesEarned().length, 5);
 }
 
+/* ================= week rank (the verdict on a week) =================
+   A grade over clears/expected, derived like everything else — nothing stored,
+   so retro-editing a forgotten day improves that week and can move the record.
+   XP is frozen against retro edits because XP is spendable; a grade buys
+   nothing, so there is no cheese to defend against.
+
+   B sits at .80 deliberately: raidInfo's hp is expected*10*0.8, so "the boss
+   fell" and "you hit B" are the same event instead of two lines that disagree
+   by a few percent. S at 1.0 is why clears/expected being able to exceed 100%
+   (a 2x/week quest cleared 5 days adds 5 to clears and 2 to expected) is a
+   feature rather than an overflow bug.
+
+   Third use of E-S in this app after MASTERY and RANKS, sharing their colours
+   on purpose — always rendered behind a "WEEK RANK" label, never as a bare
+   letter, because the week cards show mastery letters directly underneath. */
+const WEEK_RANKS = [["E",0,"#8b9bb4"],["D",.45,"#34d399"],["C",.65,"#4aa8ff"],
+                    ["B",.80,"#8b5cf6"],["A",.90,"#ff5c6a"],["S",1,"#f5c542"]];
+function weekGrade(ratio){
+  let g = WEEK_RANKS[0];
+  for (const x of WEEK_RANKS) if (ratio >= x[1]) g = x;
+  return { name:g[0], color:g[2], floor:g[1] };
+}
+const weekThreshold = name => (WEEK_RANKS.find(x => x[0] === name) || WEEK_RANKS[0])[1];
+
+/* Measured against expected FOR DAYS ELAPSED, not for the whole week. Cumulative
+   would read E-rank every Monday and Tuesday however well the week was going,
+   which is the opposite of what this feature is for. For a finished week the
+   elapsed count is 7, so this collapses to raid.expected and the same code
+   serves both the live and the final case. */
+function weekRankInfo(monday){
+  const mk = fmt(monday);
+  return memo("wrank:" + mk, () => {
+    const raid = raidInfo(monday);
+    if (!raid || !raid.expected) return null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const sunday = addDays(monday, 6);
+    const isCurrent = mk === fmt(mondayOf(today));
+    const lastDay = isCurrent ? today : sunday;
+    const qs = state.quests.filter(q => q.createdAt <= fmt(sunday));
+
+    let expSoFar = 0, remaining = 0;
+    qs.forEach(q => {
+      let elapsed = 0;
+      for (let d = new Date(monday); d <= lastDay; d = addDays(d,1))
+        if (q.createdAt <= fmt(d)) elapsed++;
+      expSoFar += freqOf(q) * elapsed / 7;   // a 2x/week quest has no day it is "due"
+      if (isCurrent)
+        for (let d = new Date(today); d <= sunday; d = addDays(d,1)){
+          const k = fmt(d);
+          if (q.createdAt <= k && !isDone(q,k)) remaining++;
+        }
+    });
+
+    const live  = weekGrade(expSoFar > 0 ? raid.clears / expSoFar : 0);
+    const floor = weekGrade(raid.clears / raid.expected);                 // do nothing more
+    const ceil  = weekGrade((raid.clears + remaining) / raid.expected);   // best still possible
+    const needFor = name => Math.max(0, Math.ceil(weekThreshold(name) * raid.expected) - raid.clears);
+
+    // Always aim at the highest rank still reachable. A line that keeps naming
+    // an unreachable target stops motivating and turns into a reproach by Friday.
+    let projection;
+    if (!isCurrent)                     projection = null;
+    else if (floor.name === ceil.name)  projection = { kind:"secured", grade:floor.name, need:0 };
+    else if (ceil.name === live.name)   projection = { kind:"hold",    grade:live.name, need:needFor(live.name) };
+    else                                projection = { kind:"climb",   grade:ceil.name, need:needFor(ceil.name) };
+
+    return { mondayKey:mk, isCurrent, grade:isCurrent ? live : floor, final:floor,
+             clears:raid.clears, expected:raid.expected, killed:raid.killed, projection };
+  });
+}
+const currentWeekRank = () => weekRankInfo(mondayOf(new Date()));
+
+/* Completed weeks only — an on-pace grade would otherwise let a strong Tuesday
+   crown itself, and the ceiling being aimed at would move on every glance. */
+function weekBest(){
+  return memo("wbest", () => {
+    if (!state.quests.length) return null;
+    const first = state.quests.reduce((m,q) => q.createdAt < m ? q.createdAt : m, todayStr());
+    const thisMon = mondayOf(new Date());
+    let mon = mondayOf(parseD(first)), best = null;
+    for (let i = 0; i < 520 && mon < thisMon; i++, mon = addDays(mon, 7)){
+      const r = raidInfo(mon);
+      if (!r || !r.expected) continue;
+      const ratio = r.clears / r.expected;
+      if (!best || ratio > best.ratio)
+        best = { ratio, mondayKey: fmt(mon), grade: weekGrade(ratio) };
+    }
+    return best;
+  });
+}
+/* consecutive weeks the boss fell; the current week still pending doesn't break it */
+function bossStreak(){
+  return memo("bstreak", () => {
+    if (!state.quests.length) return 0;
+    const first = state.quests.reduce((m,q) => q.createdAt < m ? q.createdAt : m, todayStr());
+    const createdMon = mondayOf(parseD(first));
+    let mon = mondayOf(new Date()), n = 0;
+    const cur = raidInfo(mon);
+    if (cur && cur.killed) n++;
+    for (mon = addDays(mon,-7); mon >= createdMon && n < 520; mon = addDays(mon,-7)){
+      const r = raidInfo(mon);
+      if (r && r.killed) n++; else break;
+    }
+    return n;
+  });
+}
+
 /* ================= player: levels, ranks, titles ================= */
 function need(L){ return 100 + 20*(L-1); }
 function levelFromExp(exp){
