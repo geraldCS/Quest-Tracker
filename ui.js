@@ -943,6 +943,32 @@ document.addEventListener("keydown", e => {
   if (!e.shiftKey && active === last){ e.preventDefault(); first.focus(); }
   else if (e.shiftKey && active === first){ e.preventDefault(); last.focus(); }
 });
+/* ================= keyboard shortcuts =================
+   Desktop is the primary device and quests were already reachable by Tab — each
+   row carries a real <button class="check"> — so this is a fast path over an
+   existing one, not a new interaction model. No selection/j-k model: it would
+   collide with drag-to-reorder, and it layers on later if these prove wanted. */
+const shortcutOverlay = document.getElementById("shortcutOverlay");
+function openShortcuts(){ sfx.sheetOpen(); shortcutOverlay.classList.add("open"); }
+shortcutOverlay.addEventListener("click", e => {
+  if (e.target === shortcutOverlay) shortcutOverlay.classList.remove("open");
+});
+const TYPING = el => !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (TYPING(e.target)) return;                          // naming a quest "Night run" must not fire N
+  if (document.querySelector(".overlay.open")) return;   // Escape is handled above and stays the only key
+  const tab = {"1":"quests","2":"week","3":"records"}[e.key];
+  if (tab){                                              // click the real button: sound and render come with it
+    e.preventDefault();
+    document.querySelector(`.tabs button[data-tab="${tab}"]`).click();
+  } else if (e.key === "n" || e.key === "N"){
+    e.preventDefault(); openQuestSheet();
+  } else if (e.key === "?"){
+    e.preventDefault(); openShortcuts();
+  }
+});
+
 function updateSheetFade(ov){
   const body = ov.querySelector(".sheet-body");
   if (!body) return;
@@ -1017,6 +1043,7 @@ document.getElementById("settingsBtn").onclick = openSettings;
 settingsOverlay.addEventListener("click", e => { if (e.target === settingsOverlay) settingsOverlay.classList.remove("open"); });
 document.getElementById("setRename").onclick = () => { settingsOverlay.classList.remove("open"); openNameSheet(); };
 document.getElementById("setOpenSync").onclick = () => { settingsOverlay.classList.remove("open"); openSyncSheet(); };
+document.getElementById("setShortcuts").onclick = () => { settingsOverlay.classList.remove("open"); openShortcuts(); };
 document.getElementById("resetBtn").onclick = () => {
   if (!confirm("Reset ALL data on this device?")) return;
   if (!confirm("Really? Quests, history, EXP — everything will be wiped.")) return;

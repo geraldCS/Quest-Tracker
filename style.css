@@ -781,6 +781,71 @@
     .status-main{gap:10px}
   }
 
+  /* ============ focus =============
+     The only change here that applies below the desktop breakpoint, because it
+     is a bug fix rather than a desktop feature: there was no :focus-visible rule
+     anywhere, so keyboard focus fell back to the UA ring — all but invisible on
+     this theme, even though every quest row has always had a real focusable
+     <button class="check">. Same language the sheet inputs already use.
+     :focus-visible, not :focus, so clicking doesn't leave rings behind. */
+  :focus-visible{
+    outline:2px solid var(--sys);outline-offset:2px;
+    box-shadow:0 0 10px var(--sys-glow);
+  }
+
+  /* ============ keyboard shortcut sheet ============ */
+  .key-row{
+    display:flex;align-items:center;gap:12px;padding:9px 2px;
+    border-bottom:1px solid var(--line-dim);font-size:var(--fs-base);
+  }
+  .key-row:last-of-type{border-bottom:0}
+  .key-row kbd{
+    font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700;
+    min-width:38px;text-align:center;padding:5px 8px;border-radius:6px;
+    border:1px solid var(--line);background:rgba(74,168,255,.10);color:var(--sys);
+  }
+
+  /* ============ desktop ============
+     Everything below is additive above 1000px — .app's children are flat
+     siblings (header, nav, three sections), so this is pure grid placement with
+     no HTML change, which is what keeps the phone byte-identical. */
+  @media (min-width:1000px){
+    .app{
+      max-width:1180px;display:grid;grid-template-columns:360px 1fr;
+      gap:18px;align-items:start;
+    }
+    /* sticky is the whole point — reference info should stay put while the list
+       scrolls. max-height is load-bearing, not decoration: with the radar open
+       on a short viewport the panel exceeds the screen, and a sticky element
+       taller than the viewport pins its top and strands its bottom forever. */
+    .status-win{
+      grid-column:1;grid-row:1 / span 2;margin-top:18px;
+      position:sticky;top:18px;
+      max-height:calc(100vh - 36px);overflow-y:auto;
+      /* overflow-x must be stated: setting only overflow-y makes the other axis
+         compute to auto rather than stay visible */
+      overflow-x:hidden;
+    }
+    /* The corner brackets sit at -1px so they straddle the border — invisible
+       normally, but once this panel is a scroll container that 1px counts as
+       content on BOTH axes, and a permanently-overflowing-by-1px box shows a
+       scrollbar even when nothing needs scrolling. Flush to 0 here only. */
+    .status-win::before{top:0;left:0}
+    .status-win::after{bottom:0;right:0}
+    .tabs{grid-column:2;grid-row:1;margin:18px 0 12px}
+    #tab-quests,#tab-week,#tab-records{grid-column:2;grid-row:2}
+
+    /* vertical rhythm only. Row padding stays: the desktop problem is gaps tuned
+       for a 375px screen pushing content below the fold, not over-padded rows —
+       tightening those would make them densest where there is most room. */
+    .section-head{margin:14px 2px 8px}
+
+    /* rows respond, but nothing hides behind hover: only one of the two devices
+       has a pointer, so hover-revealed controls would teach a location the phone
+       does not have */
+    .quest:hover,.todo:hover{border-color:var(--hc);cursor:default}
+  }
+
   @media (prefers-reduced-motion: reduce){
     .scanlines{display:none}
     .lvl-word{animation:none}

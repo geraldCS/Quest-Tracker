@@ -330,10 +330,37 @@
         <span class="set-note-inline" id="setSyncStatus">Not connected</span>
         <button class="pill-btn small" id="setOpenSync">OPEN SYNC</button>
       </div>
+      <label>Keyboard</label>
+      <div class="set-row">
+        <span class="set-note-inline">Shortcuts — press <b>?</b> anywhere</span>
+        <button class="pill-btn small" id="setShortcuts">VIEW</button>
+      </div>
       <label>Danger zone</label>
       <button class="danger-btn wide" id="resetBtn">RESET ALL DATA</button>
       <div class="sheet-note">Wipes this device's save. If sync is connected, your data returns from the gist on the next pull — disconnect sync first for a true wipe.</div>
       <div class="sheet-note" style="text-align:center;margin-top:18px">ARISE · build arise-v5</div>
+    </div>
+  </div>
+</div>
+
+<!-- keyboard shortcuts: reuses .overlay/.sheet so Escape and the Tab focus trap
+     come for free — the one overlay keyboard users reach for most is the worst
+     place to reimplement dismissal -->
+<div class="overlay" id="shortcutOverlay">
+  <div class="sheet">
+    <div class="sheet-notch" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h3>SHORTCUTS</h3>
+      <button class="sheet-x" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="key-row"><kbd>N</kbd><span>Register a new quest</span></div>
+      <div class="key-row"><kbd>1</kbd><span>Quests</span></div>
+      <div class="key-row"><kbd>2</kbd><span>Week</span></div>
+      <div class="key-row"><kbd>3</kbd><span>Records</span></div>
+      <div class="key-row"><kbd>?</kbd><span>This panel</span></div>
+      <div class="key-row"><kbd>Esc</kbd><span>Close any panel</span></div>
+      <div class="sheet-note">Shortcuts stand down while you are typing.</div>
     </div>
   </div>
 </div>
