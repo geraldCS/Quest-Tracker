@@ -86,7 +86,7 @@ function renderQuests(){
   const list = document.getElementById("questList");
   const t = todayStr();
   if (!state.quests.length){
-    list.innerHTML = `<li class="empty"><span class="big">⚔️</span>No Daily Quests registered.<br>Tap “+ NEW QUEST” to receive your first.</li>`;
+    list.innerHTML = `<li class="empty">${EMPTY.quests}</li>`;
     return;
   }
   list.innerHTML = "";
@@ -166,7 +166,7 @@ function renderTodos(){
   sc.hidden = openCount === 0;
   sc.textContent = openCount;
   if (!state.todos.length){
-    list.innerHTML = `<li class="empty"><span class="big">🗡️</span>No side quests logged. The board is clear.<br>Tap “+ NEW SIDE QUEST” to add one.</li>`;
+    list.innerHTML = `<li class="empty">${EMPTY.todos}</li>`;
     return;
   }
   list.innerHTML = "";
@@ -285,13 +285,13 @@ function openRaidSheet(){
     <div class="raid-name">${raid.boss}</div>
     <div class="hp-bar"><i style="width:${Math.round(100*raid.dmg/raid.hp)}%"></i></div>
     <div class="raid-sub">${raid.dmg} / ${raid.hp} DMG · ${raid.clears} clear${raid.clears===1?"":"s"} this week${raid.killed ? " · SLAIN ✔" : ""}</div>`
-    : `<div class="empty">Register Daily Quests to open the weekly gate.</div>`;
+    : `<div class="empty">${EMPTY.gate}</div>`;
   const runes = runesEarned().slice().reverse();
   const dormant = runesDormant();
   const grid = document.getElementById("runeGrid");
   grid.innerHTML = "";
   if (!runes.length){
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">No runes yet. Slay a weekly boss to claim your first.</div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${EMPTY.runes}</div>`;
   } else {
     runes.slice(0, 24).forEach(r => {
       const cell = document.createElement("div");
@@ -503,7 +503,7 @@ function renderWeek(){
   const today = new Date(); today.setHours(0,0,0,0);
   const monday = addDays(today, -((today.getDay()+6)%7));
   if (!state.quests.length){
-    el.innerHTML = `<div class="empty"><span class="big">📅</span>Register Daily Quests to see your week.</div>`;
+    el.innerHTML = `<div class="empty">${EMPTY.week}</div>`;
     return;
   }
   el.innerHTML = "";
@@ -655,7 +655,7 @@ function renderDayEditor(){
   const wrap = document.getElementById("dayRows");
   const quests = state.quests;   // all quests editable — backfilling extends a quest's history
   if (!quests.length){
-    wrap.innerHTML = `<div class="empty">No quests registered.</div>`;
+    wrap.innerHTML = `<div class="empty">${EMPTY.dayEditor}</div>`;
     return;
   }
   wrap.innerHTML = "";
@@ -829,7 +829,7 @@ let obStep = 1, obKeepStarters = true;
 function renderObQuests(){
   document.getElementById("obQuests").innerHTML = state.quests.map(q =>
     `<li>${glyphOf(q)}<b>${esc(q.name)}</b><span class="ob-q-meta">${
-      q.target ? esc(targetOf(q) + " " + unitOf(q)) : "one tap"} · ${STATS[q.stat].ab}</span></li>`).join("");
+      q.target ? esc(targetOf(q) + " " + unitOf(q)) : "one clear"} · ${STATS[q.stat].ab}</span></li>`).join("");
 }
 function renderOnboard(){
   document.querySelectorAll("#onboardOverlay .ob-step").forEach(el => { el.hidden = +el.dataset.step !== obStep; });
@@ -901,7 +901,7 @@ function openGallery(){
   const grid = document.createElement("div");
   grid.className = "rune-grid";
   if (!runes.length){
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Slay a weekly gate boss to claim your first rune.</div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${EMPTY.runes}</div>`;
   } else {
     runes.slice(-24).reverse().forEach(r => {
       const cell = document.createElement("div");
