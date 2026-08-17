@@ -55,6 +55,28 @@ const hashStr = s => { let h = 0; for (const c of s) h = (h*31 + c.charCodeAt(0)
 const BASE_XP = 20, SIDE_XP = 5, PERFECT_XP = 25;
 const DAY_LETTERS = ["M","T","W","T","F","S","S"];
 
+/* ================= empty-state copy =================
+   All of it lives here, not inline at the render sites. The rune message used
+   to exist twice — in the raid panel and in the records gallery — saying the
+   same thing in different words, which is what inline copy does to itself over
+   time. One home also makes the voice auditable: one list to read instead of
+   seven innerHTML calls to find.
+
+   Shape: what is missing, then what to do. No verbs of touch — the control is
+   named, never the gesture, so the words are right on a phone and on a desktop
+   without a media query keeping two copies of every string in sync.
+
+   Glyphs only where they already were. In the raid panel and the day editor the
+   surrounding content is dense enough without one. */
+const EMPTY = {
+  quests:    `<span class="big">⚔️</span><b>No Daily Quests stand.</b> Register your first with <b>+ NEW QUEST</b>.`,
+  todos:     `<span class="big">🗡️</span><b>The side quest board is clear.</b> Add one with <b>+ NEW SIDE QUEST</b>.`,
+  gate:      `<b>The gate stays shut.</b> Register a Daily Quest to open this week's raid.`,
+  runes:     `<b>No runes claimed.</b> Slay a weekly gate boss to claim your first.`,
+  week:      `<span class="big">📅</span><b>No week to show.</b> Register a Daily Quest and the week fills in.`,
+  dayEditor: `<b>No quests to record.</b> Register a Daily Quest first.`
+};
+
 const pad = n => String(n).padStart(2,"0");
 const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const parseD = s => { const [y,m,dd] = s.split("-").map(Number); return new Date(y, m-1, dd); };
