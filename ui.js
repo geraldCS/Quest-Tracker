@@ -1032,11 +1032,39 @@ function backupAgeText(){
        : days === 1 ? "Last backup — yesterday"
        : `Last backup — ${days} days ago`;
 }
+/* ================= build identity =================
+   This line used to be the hard-coded string "ARISE · build arise-v5". It was
+   wired to nothing, so it went stale the first round nobody remembered to edit
+   it and then sat eight versions behind — the one indicator built to answer
+   "am I on the latest?" was the one thing in the app actively lying about it.
+
+   Reading caches.keys() removes the remembering. The name comes from whatever
+   the service worker actually activated, so it cannot drift from reality: if
+   the page is being served from the arise-v13 cache, it says arise-v13.
+
+   No service worker means no cache, which is the truth on localhost (boot.js
+   skips registration there) and in a file:// open. Say so rather than invent a
+   version. */
+async function renderBuild(){
+  const el = document.getElementById("buildLine");
+  if (!el) return;
+  let name = null;
+  try{
+    if (window.caches){
+      const keys = await caches.keys();
+      const v = k => parseInt(k.replace(/\D+/g, ""), 10) || 0;   // v9 < v13, which a lexical sort gets backwards
+      name = keys.filter(k => k.startsWith("arise-")).sort((a,b) => v(a) - v(b)).pop() || null;
+    }
+  }catch(_){}
+  el.textContent = name ? `ARISE · ${name}` : "ARISE · unpackaged (no cache)";
+}
+
 function openSettings(){
   document.getElementById("setName").textContent = state.player.name || "HUNTER";
   document.getElementById("setSyncStatus").textContent =
     localStorage.getItem("arise-sync-token") ? "Connected — gist backup active" : "Not connected";
   document.getElementById("setBackupAge").textContent = backupAgeText();
+  renderBuild();          // async, but the line is far below the fold — it fills in before you reach it
   settingsOverlay.classList.add("open");
 }
 document.getElementById("settingsBtn").onclick = openSettings;
